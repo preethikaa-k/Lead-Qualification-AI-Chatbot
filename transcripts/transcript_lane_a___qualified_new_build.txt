@@ -1,0 +1,45 @@
+=== Lane A - Qualified New-Build ===
+Lane: A | Result: PASS
+Final Qualification Status: QUALIFIED
+--------------------------------------------------
+
+VISITOR: Hello, I am Sarah
+
+BOT: Hello Sarah! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?
+
+VISITOR: Buy
+
+BOT: Do you have a specific property in mind?
+
+VISITOR: No
+
+BOT: Are you looking for a new-build or a resale home?
+
+VISITOR: New-build
+
+BOT: What is your budget for the new-build home, Sarah?
+
+VISITOR: £1.5m
+
+BOT: What is the postcode of your location of interest?
+
+VISITOR: SW3 3RB
+
+BOT: Great news, Sarah, we have available new-build homes matching your requirements:
+• Apartment 1, Aldermoor Place - 2 bed apartment at £1,330,000
+• Apartment 2, Aldermoor Place - 2 bed apartment at £1,230,000
+
+Can I get your phone number so our team can follow up with details?
+
+VISITOR: 07123 456789
+
+BOT: Thank you! Can I get your email address?
+
+VISITOR: sarah@example.com
+
+BOT: Someone will get in touch within 24 hours via phone or email. Is there anything else I can help you with?
+
+VISITOR: No, that's everything
+
+BOT: Thank you for chatting with us. Goodbye.
+

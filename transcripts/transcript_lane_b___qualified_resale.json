@@ -1,0 +1,139 @@
+{
+  "benchmark_name": "Lane B - Qualified Resale",
+  "lane": "B",
+  "passed": true,
+  "lead_data": {
+    "visitor_name": "James",
+    "phone": "07987 654321",
+    "email": "james@example.com",
+    "intent": "buy",
+    "category": "resale",
+    "budget_gbp": 750000,
+    "postcode": "SW3 5WU",
+    "specific_property_name": null,
+    "matched_properties": [
+      {
+        "property_id": "AR-0008",
+        "property_name": "Rosemount House",
+        "address": "Rosemount House, Bramerton Street",
+        "town": "London",
+        "postcode": "SW3 5WU",
+        "listing_category": "resale",
+        "property_type": "Detached house",
+        "bedrooms": 3,
+        "bathrooms": 1,
+        "price_gbp": 3345000,
+        "status": "available",
+        "description": "3-bedroom detached house on Bramerton Street with a principal suite with dressing room and solar panels, within easy reach of the King's Road.",
+        "branch": "Chelsea",
+        "listed_date": "2026-02-26"
+      },
+      {
+        "property_id": "AR-0009",
+        "property_name": "89 Bramerton Street",
+        "address": "89 Bramerton Street",
+        "town": "London",
+        "postcode": "SW3 5WU",
+        "listing_category": "resale",
+        "property_type": "Terraced house",
+        "bedrooms": 6,
+        "bathrooms": 4,
+        "price_gbp": 5195000,
+        "status": "available",
+        "description": "6-bedroom terraced house on Bramerton Street with a south-facing garden and an indoor pool, within easy reach of the King's Road.",
+        "branch": "Chelsea",
+        "listed_date": "2026-03-06"
+      },
+      {
+        "property_id": "AR-0010",
+        "property_name": "56 Bramerton Street",
+        "address": "56 Bramerton Street",
+        "town": "London",
+        "postcode": "SW3 5WU",
+        "listing_category": "resale",
+        "property_type": "Semi-detached house",
+        "bedrooms": 3,
+        "bathrooms": 2,
+        "price_gbp": 2330000,
+        "status": "available",
+        "description": "3-bedroom semi-detached house on Bramerton Street with a kitchen/family room opening onto the garden and a home office, within easy reach of the King's Road.",
+        "branch": "Chelsea",
+        "listed_date": "2026-03-22"
+      }
+    ]
+  },
+  "history": [
+    {
+      "role": "user",
+      "content": "Hello, I'm James"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello James! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?"
+    },
+    {
+      "role": "user",
+      "content": "Buy"
+    },
+    {
+      "role": "assistant",
+      "content": "Do you have a specific property in mind?"
+    },
+    {
+      "role": "user",
+      "content": "No"
+    },
+    {
+      "role": "assistant",
+      "content": "Are you looking for a new-build or a resale home?"
+    },
+    {
+      "role": "user",
+      "content": "Resale"
+    },
+    {
+      "role": "assistant",
+      "content": "What is your budget, James?"
+    },
+    {
+      "role": "user",
+      "content": "\u00a3750,000"
+    },
+    {
+      "role": "assistant",
+      "content": "What is the postcode of your location of interest?"
+    },
+    {
+      "role": "user",
+      "content": "SW3 5WU"
+    },
+    {
+      "role": "assistant",
+      "content": "Great news, James, we have available resale homes in that area:\n\u2022 Rosemount House - 3 bed detached house at \u00a33,345,000\n\u2022 89 Bramerton Street - 6 bed terraced house at \u00a35,195,000\n\u2022 56 Bramerton Street - 3 bed semi-detached house at \u00a32,330,000\n\nCan I get your phone number so our team can follow up with details?"
+    },
+    {
+      "role": "user",
+      "content": "07987 654321"
+    },
+    {
+      "role": "assistant",
+      "content": "Thank you! Can I get your email address?"
+    },
+    {
+      "role": "user",
+      "content": "james@example.com"
+    },
+    {
+      "role": "assistant",
+      "content": "Someone will get in touch within 24 hours via phone or email. Is there anything else I can help you with?"
+    },
+    {
+      "role": "user",
+      "content": "No thanks"
+    },
+    {
+      "role": "assistant",
+      "content": "Thank you for chatting with us. Goodbye."
+    }
+  ]
+}

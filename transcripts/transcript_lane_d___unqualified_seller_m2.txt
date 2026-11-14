@@ -1,0 +1,17 @@
+=== Lane D - Unqualified Seller M2 ===
+Lane: D | Result: PASS
+Final Qualification Status: UNQUALIFIED_M2
+--------------------------------------------------
+
+VISITOR: Hello, I am Frank
+
+BOT: Hello Frank! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?
+
+VISITOR: Sell
+
+BOT: Excellent. What is your postcode, Frank?
+
+VISITOR: E1 6AN
+
+BOT: Sorry, we don't cater to the postcode you provided. You can reach our head office on 020 7946 0100. Goodbye.
+

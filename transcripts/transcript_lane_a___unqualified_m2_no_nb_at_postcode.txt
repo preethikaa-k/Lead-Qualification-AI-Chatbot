@@ -1,0 +1,29 @@
+=== Lane A - Unqualified M2 (No NB at Postcode) ===
+Lane: A | Result: PASS
+Final Qualification Status: UNQUALIFIED_M2
+--------------------------------------------------
+
+VISITOR: Hi, I'm Charlotte
+
+BOT: Hello Charlotte! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?
+
+VISITOR: Buy
+
+BOT: Do you have a specific property in mind?
+
+VISITOR: No
+
+BOT: Are you looking for a new-build or a resale home?
+
+VISITOR: New-build
+
+BOT: What is your budget for the new-build home, Charlotte?
+
+VISITOR: £2m
+
+BOT: What is the postcode of your location of interest?
+
+VISITOR: SW10 9RR
+
+BOT: Sorry, we don't cater to the postcode you provided. You can reach our head office on 020 7946 0100. Goodbye.
+

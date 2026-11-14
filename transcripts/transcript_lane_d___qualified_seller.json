@@ -1,0 +1,58 @@
+{
+  "benchmark_name": "Lane D - Qualified Seller",
+  "lane": "D",
+  "passed": true,
+  "lead_data": {
+    "visitor_name": "Arthur",
+    "phone": "07555 999888",
+    "email": "arthur@example.com",
+    "intent": "sell",
+    "category": null,
+    "budget_gbp": null,
+    "postcode": "KT11 4GR",
+    "specific_property_name": null,
+    "matched_properties": []
+  },
+  "history": [
+    {
+      "role": "user",
+      "content": "Hello, I want to sell my property, my name is Arthur"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello Arthur! Welcome to Ashcombe & Rowe Estates. What is your postcode?"
+    },
+    {
+      "role": "user",
+      "content": "KT11 4GR"
+    },
+    {
+      "role": "assistant",
+      "content": "Great news, Arthur, we cover your area (KT11 4GR)! Can I get your phone number so our local branch can arrange a valuation?"
+    },
+    {
+      "role": "user",
+      "content": "07555 999888"
+    },
+    {
+      "role": "assistant",
+      "content": "Thank you! Can I get your email address?"
+    },
+    {
+      "role": "user",
+      "content": "arthur@example.com"
+    },
+    {
+      "role": "assistant",
+      "content": "Someone will get in touch within 24 hours via phone or email. Is there anything else I can help you with?"
+    },
+    {
+      "role": "user",
+      "content": "No, that is all"
+    },
+    {
+      "role": "assistant",
+      "content": "Thank you for chatting with us. Goodbye."
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "benchmark_name": "Lane D - Unqualified Seller M2",
+  "lane": "D",
+  "passed": true,
+  "lead_data": {
+    "visitor_name": "Frank",
+    "phone": null,
+    "email": null,
+    "intent": "sell",
+    "category": null,
+    "budget_gbp": null,
+    "postcode": "E1 6AN",
+    "specific_property_name": null,
+    "matched_properties": []
+  },
+  "history": [
+    {
+      "role": "user",
+      "content": "Hello, I am Frank"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello Frank! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?"
+    },
+    {
+      "role": "user",
+      "content": "Sell"
+    },
+    {
+      "role": "assistant",
+      "content": "Excellent. What is your postcode, Frank?"
+    },
+    {
+      "role": "user",
+      "content": "E1 6AN"
+    },
+    {
+      "role": "assistant",
+      "content": "Sorry, we don't cater to the postcode you provided. You can reach our head office on 020 7946 0100. Goodbye."
+    }
+  ]
+}

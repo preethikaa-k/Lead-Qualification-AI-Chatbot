@@ -1,0 +1,46 @@
+=== Lane B - Qualified Resale ===
+Lane: B | Result: PASS
+Final Qualification Status: QUALIFIED
+--------------------------------------------------
+
+VISITOR: Hello, I'm James
+
+BOT: Hello James! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?
+
+VISITOR: Buy
+
+BOT: Do you have a specific property in mind?
+
+VISITOR: No
+
+BOT: Are you looking for a new-build or a resale home?
+
+VISITOR: Resale
+
+BOT: What is your budget, James?
+
+VISITOR: £750,000
+
+BOT: What is the postcode of your location of interest?
+
+VISITOR: SW3 5WU
+
+BOT: Great news, James, we have available resale homes in that area:
+• Rosemount House - 3 bed detached house at £3,345,000
+• 89 Bramerton Street - 6 bed terraced house at £5,195,000
+• 56 Bramerton Street - 3 bed semi-detached house at £2,330,000
+
+Can I get your phone number so our team can follow up with details?
+
+VISITOR: 07987 654321
+
+BOT: Thank you! Can I get your email address?
+
+VISITOR: james@example.com
+
+BOT: Someone will get in touch within 24 hours via phone or email. Is there anything else I can help you with?
+
+VISITOR: No thanks
+
+BOT: Thank you for chatting with us. Goodbye.
+

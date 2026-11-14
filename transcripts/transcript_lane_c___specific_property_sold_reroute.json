@@ -1,0 +1,58 @@
+{
+  "benchmark_name": "Lane C - Specific Property Sold Reroute",
+  "lane": "C",
+  "passed": true,
+  "lead_data": {
+    "visitor_name": "Liam",
+    "phone": null,
+    "email": null,
+    "intent": "buy",
+    "category": "specific_property",
+    "budget_gbp": 800000,
+    "postcode": null,
+    "specific_property_name": "Townhouse 2, Riverside Quarter",
+    "matched_properties": []
+  },
+  "history": [
+    {
+      "role": "user",
+      "content": "Hi, I'm Liam"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello Liam! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?"
+    },
+    {
+      "role": "user",
+      "content": "Buy"
+    },
+    {
+      "role": "assistant",
+      "content": "Do you have a specific property in mind?"
+    },
+    {
+      "role": "user",
+      "content": "Yes"
+    },
+    {
+      "role": "assistant",
+      "content": "Which property is it? Please share the property name or address."
+    },
+    {
+      "role": "user",
+      "content": "Townhouse 2, Riverside Quarter"
+    },
+    {
+      "role": "assistant",
+      "content": "Sorry, that property is currently sold. I can help you find a similar home. What's your budget?"
+    },
+    {
+      "role": "user",
+      "content": "\u00a3800k"
+    },
+    {
+      "role": "assistant",
+      "content": "Sorry, we don't cater to new-build properties under \u00a31 million. You can reach our head office on 020 7946 0100. Goodbye."
+    }
+  ]
+}

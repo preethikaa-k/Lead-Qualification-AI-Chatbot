@@ -1,0 +1,123 @@
+{
+  "benchmark_name": "Lane A - Qualified New-Build",
+  "lane": "A",
+  "passed": true,
+  "lead_data": {
+    "visitor_name": "Sarah",
+    "phone": "07123 456789",
+    "email": "sarah@example.com",
+    "intent": "buy",
+    "category": "new_build",
+    "budget_gbp": 1500000,
+    "postcode": "SW3 3RB",
+    "specific_property_name": null,
+    "matched_properties": [
+      {
+        "property_id": "AR-0001",
+        "property_name": "Apartment 1, Aldermoor Place",
+        "address": "Apartment 1, Aldermoor Place, 47 Markham Square",
+        "town": "London",
+        "postcode": "SW3 3RB",
+        "listing_category": "new_build",
+        "property_type": "Apartment",
+        "bedrooms": 2,
+        "bathrooms": 2,
+        "price_gbp": 1330000,
+        "status": "available",
+        "description": "Brand-new 2-bedroom apartment in the Aldermoor Place development, with lateral living space and a 24-hour concierge. Close to the King's Road. 10-year build warranty.",
+        "branch": "Chelsea",
+        "listed_date": "2026-03-25"
+      },
+      {
+        "property_id": "AR-0002",
+        "property_name": "Apartment 2, Aldermoor Place",
+        "address": "Apartment 2, Aldermoor Place, 47 Markham Square",
+        "town": "London",
+        "postcode": "SW3 3RB",
+        "listing_category": "new_build",
+        "property_type": "Apartment",
+        "bedrooms": 2,
+        "bathrooms": 1,
+        "price_gbp": 1230000,
+        "status": "available",
+        "description": "Brand-new 2-bedroom apartment in the Aldermoor Place development, with secure underground parking and a private balcony. Close to the King's Road. 10-year build warranty.",
+        "branch": "Chelsea",
+        "listed_date": "2026-07-04"
+      }
+    ]
+  },
+  "history": [
+    {
+      "role": "user",
+      "content": "Hello, I am Sarah"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello Sarah! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?"
+    },
+    {
+      "role": "user",
+      "content": "Buy"
+    },
+    {
+      "role": "assistant",
+      "content": "Do you have a specific property in mind?"
+    },
+    {
+      "role": "user",
+      "content": "No"
+    },
+    {
+      "role": "assistant",
+      "content": "Are you looking for a new-build or a resale home?"
+    },
+    {
+      "role": "user",
+      "content": "New-build"
+    },
+    {
+      "role": "assistant",
+      "content": "What is your budget for the new-build home, Sarah?"
+    },
+    {
+      "role": "user",
+      "content": "\u00a31.5m"
+    },
+    {
+      "role": "assistant",
+      "content": "What is the postcode of your location of interest?"
+    },
+    {
+      "role": "user",
+      "content": "SW3 3RB"
+    },
+    {
+      "role": "assistant",
+      "content": "Great news, Sarah, we have available new-build homes matching your requirements:\n\u2022 Apartment 1, Aldermoor Place - 2 bed apartment at \u00a31,330,000\n\u2022 Apartment 2, Aldermoor Place - 2 bed apartment at \u00a31,230,000\n\nCan I get your phone number so our team can follow up with details?"
+    },
+    {
+      "role": "user",
+      "content": "07123 456789"
+    },
+    {
+      "role": "assistant",
+      "content": "Thank you! Can I get your email address?"
+    },
+    {
+      "role": "user",
+      "content": "sarah@example.com"
+    },
+    {
+      "role": "assistant",
+      "content": "Someone will get in touch within 24 hours via phone or email. Is there anything else I can help you with?"
+    },
+    {
+      "role": "user",
+      "content": "No, that's everything"
+    },
+    {
+      "role": "assistant",
+      "content": "Thank you for chatting with us. Goodbye."
+    }
+  ]
+}

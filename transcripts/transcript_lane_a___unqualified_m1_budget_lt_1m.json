@@ -1,0 +1,58 @@
+{
+  "benchmark_name": "Lane A - Unqualified M1 (Budget < 1M)",
+  "lane": "A",
+  "passed": true,
+  "lead_data": {
+    "visitor_name": "Oliver",
+    "phone": null,
+    "email": null,
+    "intent": "buy",
+    "category": "new_build",
+    "budget_gbp": 950000,
+    "postcode": null,
+    "specific_property_name": null,
+    "matched_properties": []
+  },
+  "history": [
+    {
+      "role": "user",
+      "content": "Hi, I'm Oliver"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello Oliver! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?"
+    },
+    {
+      "role": "user",
+      "content": "Buy"
+    },
+    {
+      "role": "assistant",
+      "content": "Do you have a specific property in mind?"
+    },
+    {
+      "role": "user",
+      "content": "No"
+    },
+    {
+      "role": "assistant",
+      "content": "Are you looking for a new-build or a resale home?"
+    },
+    {
+      "role": "user",
+      "content": "New-build"
+    },
+    {
+      "role": "assistant",
+      "content": "What is your budget for the new-build home, Oliver?"
+    },
+    {
+      "role": "user",
+      "content": "950k"
+    },
+    {
+      "role": "assistant",
+      "content": "Sorry, we don't cater to new-build properties under \u00a31 million. You can reach our head office on 020 7946 0100. Goodbye."
+    }
+  ]
+}

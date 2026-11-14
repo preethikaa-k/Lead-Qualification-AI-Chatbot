@@ -1,0 +1,74 @@
+{
+  "benchmark_name": "Lane C - Specific Property Available",
+  "lane": "C",
+  "passed": true,
+  "lead_data": {
+    "visitor_name": "Karen",
+    "phone": "07456 123456",
+    "email": "karen@example.com",
+    "intent": "buy",
+    "category": "specific_property",
+    "budget_gbp": null,
+    "postcode": null,
+    "specific_property_name": "Apartment 1, Aldermoor Place",
+    "matched_properties": []
+  },
+  "history": [
+    {
+      "role": "user",
+      "content": "Hi, I'm Karen"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello Karen! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?"
+    },
+    {
+      "role": "user",
+      "content": "Buy"
+    },
+    {
+      "role": "assistant",
+      "content": "Do you have a specific property in mind?"
+    },
+    {
+      "role": "user",
+      "content": "Yes"
+    },
+    {
+      "role": "assistant",
+      "content": "Which property is it? Please share the property name or address."
+    },
+    {
+      "role": "user",
+      "content": "Apartment 1, Aldermoor Place"
+    },
+    {
+      "role": "assistant",
+      "content": "Great news, Karen, 'Apartment 1, Aldermoor Place' is available! It is a 2-bedroom, 2-bathroom apartment priced at \u00a31,330,000.\n\nCan I get your phone number so our team can arrange a viewing?"
+    },
+    {
+      "role": "user",
+      "content": "07456 123456"
+    },
+    {
+      "role": "assistant",
+      "content": "Thank you! Can I get your email address?"
+    },
+    {
+      "role": "user",
+      "content": "karen@example.com"
+    },
+    {
+      "role": "assistant",
+      "content": "Someone will get in touch within 24 hours via phone or email. Is there anything else I can help you with?"
+    },
+    {
+      "role": "user",
+      "content": "No, goodbye"
+    },
+    {
+      "role": "assistant",
+      "content": "Thank you for chatting with us. Goodbye."
+    }
+  ]
+}

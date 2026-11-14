@@ -1,0 +1,25 @@
+=== Lane D - Qualified Seller ===
+Lane: D | Result: PASS
+Final Qualification Status: QUALIFIED
+--------------------------------------------------
+
+VISITOR: Hello, I want to sell my property, my name is Arthur
+
+BOT: Hello Arthur! Welcome to Ashcombe & Rowe Estates. What is your postcode?
+
+VISITOR: KT11 4GR
+
+BOT: Great news, Arthur, we cover your area (KT11 4GR)! Can I get your phone number so our local branch can arrange a valuation?
+
+VISITOR: 07555 999888
+
+BOT: Thank you! Can I get your email address?
+
+VISITOR: arthur@example.com
+
+BOT: Someone will get in touch within 24 hours via phone or email. Is there anything else I can help you with?
+
+VISITOR: No, that is all
+
+BOT: Thank you for chatting with us. Goodbye.
+
