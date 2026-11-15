@@ -216,6 +216,20 @@ class FAQRagEngine:
                     logger.info(f"Chroma not available ({e}), falling back to LangChain InMemoryVectorStore.")
                     self.vector_store = InMemoryVectorStore(embeddings)
                     self.vector_store.add_texts(texts=texts, metadatas=metadatas)
+            elif store_choice == "qdrant":
+                try:
+                    from langchain_community.vectorstores import Qdrant
+                    self.vector_store = Qdrant.from_texts(
+                        texts=texts,
+                        embedding=embeddings,
+                        metadatas=metadatas,
+                        location=":memory:",
+                    )
+                    logger.info(f"Initialized Qdrant in-memory vector store with {len(texts)} embeddings.")
+                except Exception as e:
+                    logger.info(f"Qdrant not available ({e}), falling back to LangChain InMemoryVectorStore.")
+                    self.vector_store = InMemoryVectorStore(embeddings)
+                    self.vector_store.add_texts(texts=texts, metadatas=metadatas)
             else:
                 self.vector_store = InMemoryVectorStore(embeddings)
                 self.vector_store.add_texts(texts=texts, metadatas=metadatas)
