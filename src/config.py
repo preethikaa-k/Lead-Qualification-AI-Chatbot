@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     EMBEDDING_PROVIDER: str = os.getenv("EMBEDDING_PROVIDER", "local")  # local | gemini | openai
     EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
     EMBEDDING_API_KEY: str = os.getenv("EMBEDDING_API_KEY", "")
-    RAG_VECTOR_STORE: str = os.getenv("RAG_VECTOR_STORE", "chroma")  # chroma | in_memory | faiss
+    RAG_VECTOR_STORE: str = os.getenv("RAG_VECTOR_STORE", "chroma")  # chroma | in_memory
     
     # Data Paths
     DATA_DIR: Path = PROJECT_ROOT / "data"
