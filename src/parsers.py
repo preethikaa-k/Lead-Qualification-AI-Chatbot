@@ -158,7 +158,7 @@ def parse_yes_no(text: str) -> Optional[bool]:
     return None
 
 
-def detect_mind_change(text: str) -> Optional[str]:
+def detect_mind_change(text: str, current_intent: Optional[str] = None) -> Optional[str]:
     """
     Detects if the visitor is changing their mind mid-flow.
     Returns 'buy', 'sell', or None.
@@ -169,8 +169,29 @@ def detect_mind_change(text: str) -> Optional[str]:
       - 'Switch to selling'
       - 'I want to sell my property now'
     """
-    clean = text.lower()
+    clean = text.lower().strip()
     
+    # If the text is an inquiry, question, request to list/browse properties,
+    # or mentions out-of-scope non-residential items (e.g. Taj Mahal, aircraft hangar),
+    # do NOT treat it as a mind-change unless explicit change markers are present.
+    inquiry_markers = [
+        "?", "where", "what", "which", "how", "can i", "do you", "tell me", "is there",
+        "list", "show", "portfolio", "taj mahal", "hangar", "aircraft", "monument",
+        "warehouse", "commercial", "solar"
+    ]
+    is_inquiry = any(marker in clean for marker in inquiry_markers)
+    has_explicit_change = any(k in clean for k in ("actually", "change my mind", "changed my mind", "instead", "rather", "switch to", "switch"))
+
+    if is_inquiry and not has_explicit_change:
+        return None
+
+    # If user is already on this intent and didn't state an explicit switch, don't re-trigger mind change
+    if current_intent and not has_explicit_change:
+        if current_intent == "buy" and ("buy" in clean or "purchas" in clean) and "sell" not in clean:
+            return None
+        if current_intent == "sell" and "sell" in clean and "buy" not in clean:
+            return None
+
     # Explicit mind-change markers or verbs
     sell_patterns = [
         r"\b(?:actually|change(?:d)? my mind|instead|rather|switch to|prefer to)\b.*\b(?:sell|selling)\b",
@@ -180,7 +201,6 @@ def detect_mind_change(text: str) -> Optional[str]:
     buy_patterns = [
         r"\b(?:actually|change(?:d)? my mind|instead|rather|switch to|prefer to)\b.*\b(?:buy|buying|purchase)\b",
         r"\b(?:want to|like to|decided to|switch to)\s+(?:buy|buying|purchase)\b",
-        r"\bbuy a (?:home|house|property|flat)\b",
     ]
 
     for pat in sell_patterns:
@@ -192,7 +212,7 @@ def detect_mind_change(text: str) -> Optional[str]:
             return "buy"
 
     # Fallback to keyword containment
-    if any(k in clean for k in ("actually", "change my mind", "instead", "rather")):
+    if has_explicit_change:
         if "sell" in clean:
             return "sell"
         if "buy" in clean or "purchas" in clean:

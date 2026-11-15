@@ -15,26 +15,6 @@
   },
   "history": [
     {
-      "role": "user",
-      "content": "Hello, I want to sell my property, my name is Arthur"
-    },
-    {
-      "role": "assistant",
-      "content": "No problem! Let's help you sell your property. What is your postcode?"
-    },
-    {
-      "role": "user",
-      "content": "KT11 4GR"
-    },
-    {
-      "role": "assistant",
-      "content": "Great news, we cover your area (KT11 4GR)! Can I get your phone number so our local branch can arrange a valuation?"
-    },
-    {
-      "role": "user",
-      "content": "07555 999888"
-    },
-    {
       "role": "assistant",
       "content": "Thank you! Can I get your email address?"
     },

@@ -64,66 +64,6 @@
   },
   "history": [
     {
-      "role": "user",
-      "content": "Hi, I am Grace"
-    },
-    {
-      "role": "assistant",
-      "content": "Hello Grace! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?"
-    },
-    {
-      "role": "user",
-      "content": "Buy"
-    },
-    {
-      "role": "assistant",
-      "content": "Do you have a specific property in mind?"
-    },
-    {
-      "role": "user",
-      "content": "No"
-    },
-    {
-      "role": "assistant",
-      "content": "Are you looking for a new-build or a resale home?"
-    },
-    {
-      "role": "user",
-      "content": "Resale"
-    },
-    {
-      "role": "assistant",
-      "content": "What is your budget, Grace?"
-    },
-    {
-      "role": "user",
-      "content": "What are the Chelsea branch opening hours?"
-    },
-    {
-      "role": "assistant",
-      "content": "Chelsea branch: Monday to Friday 9:00 am - 7:00 pm, Saturday 10:00 am - 5:00 pm, Sunday 11:00 am - 3:00 pm.\n\nNow, back to our conversation: What is your budget, Grace?"
-    },
-    {
-      "role": "user",
-      "content": "\u00a31.2m"
-    },
-    {
-      "role": "assistant",
-      "content": "What is the postcode of your location of interest?"
-    },
-    {
-      "role": "user",
-      "content": "SW3 5WU"
-    },
-    {
-      "role": "assistant",
-      "content": "Great news, Grace, we have available resale homes in that area:\n\u2022 Rosemount House - 3 bed detached house at \u00a33,345,000\n\u2022 89 Bramerton Street - 6 bed terraced house at \u00a35,195,000\n\u2022 56 Bramerton Street - 3 bed semi-detached house at \u00a32,330,000\n\nCan I get your phone number so our team can follow up with details?"
-    },
-    {
-      "role": "user",
-      "content": "07123 789456"
-    },
-    {
       "role": "assistant",
       "content": "Thank you! Can I get your email address?"
     },

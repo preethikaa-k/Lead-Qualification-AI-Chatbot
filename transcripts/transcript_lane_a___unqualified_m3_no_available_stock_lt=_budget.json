@@ -1,0 +1,38 @@
+{
+  "benchmark_name": "Lane A - Unqualified M3 (No available stock <= budget)",
+  "lane": "A",
+  "passed": true,
+  "lead_data": {
+    "visitor_name": "Charlie",
+    "phone": null,
+    "email": null,
+    "intent": "buy",
+    "category": "new_build",
+    "budget_gbp": 1100000,
+    "postcode": "SW3 3RB",
+    "specific_property_name": null,
+    "matched_properties": []
+  },
+  "history": [
+    {
+      "role": "assistant",
+      "content": "What is your budget for the new-build home, Charlie?"
+    },
+    {
+      "role": "user",
+      "content": "\u00a31.1m"
+    },
+    {
+      "role": "assistant",
+      "content": "What is the postcode of your location of interest?"
+    },
+    {
+      "role": "user",
+      "content": "SW3 3RB"
+    },
+    {
+      "role": "assistant",
+      "content": "Sorry, we have no available homes matching your requirements right now. You can reach our head office on 020 7946 0100. Goodbye."
+    }
+  ]
+}

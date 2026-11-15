@@ -18,6 +18,8 @@ from src.state_machine import state_machine
 from src.llm_factory import llm_client
 from src.tools import ALL_ESTATE_TOOLS
 from src.config import settings
+from src.guardrails import input_guardrail, output_guardrail, InputGuardrail, OutputGuardrail
+from src.memory import short_term_memory, ShortTermSessionManager
 from src.graph_agent import (
     lead_qualification_graph,
     graph_state_to_conversation_state,
@@ -36,66 +38,99 @@ class LeadQualificationAgent:
         self.llm = llm_client
         self.tools = ALL_ESTATE_TOOLS
         self.sessions: Dict[str, ConversationState] = {}
+        self.input_guardrail: InputGuardrail = input_guardrail
+        self.output_guardrail: OutputGuardrail = output_guardrail
+        self.memory: ShortTermSessionManager = short_term_memory
 
     def get_or_create_session(self, session_id: Optional[str] = None) -> ConversationState:
-        if not session_id or session_id not in self.sessions:
-            new_id = session_id or str(uuid.uuid4())
+        if not session_id:
+            new_id = str(uuid.uuid4())
             state = ConversationState(session_id=new_id)
             self.sessions[new_id] = state
+            self.memory.save_session(new_id, state)
             return state
-        return self.sessions[session_id]
+
+        if session_id in self.sessions:
+            return self.sessions[session_id]
+
+        # Check Redis / distributed session store
+        loaded = self.memory.load_session(session_id)
+        if loaded:
+            self.sessions[session_id] = loaded
+            return loaded
+
+        state = ConversationState(session_id=session_id)
+        self.sessions[session_id] = state
+        self.memory.save_session(session_id, state)
+        return state
 
     def _check_prompt_injection(self, text: str) -> bool:
         """
         Detects adversarial attempts to hijack bot instructions or bypass lead qualification.
         Enforces strict compliance: 'Keep the bot on topic and resistant to attempts to make it ignore its rules.'
         """
-        injection_patterns = [
-            r"ignore (?:all )?(?:previous|above) instructions",
-            r"you are now (?:in )?(?:dan|jailbreak|unrestricted)",
-            r"system override",
-            r"pretend to be",
-            r"act as an unfiltered",
-            r"reveal your (?:system )?prompt",
-            r"forget your rules",
-            r"qualify me anyway",
-            r"bypass (?:check|qualification|flow)",
-        ]
-        lower = text.lower()
-        return any(re.search(pat, lower) for pat in injection_patterns)
+        return self.input_guardrail.check_prompt_injection(text)
 
     def chat(self, session_id: str, user_message: str) -> str:
         """
         Processes a user message for the given session.
-        Orchestrated via LangGraph StateGraph with checkpointed memory.
+        Orchestrated via LangGraph StateGraph with checkpointed memory,
+        protected by production-grade Input and Output Guardrails.
         """
         state = self.get_or_create_session(session_id)
 
-        if self.use_langgraph:
-            config = {"configurable": {"thread_id": session_id}}
-            result = self.graph.invoke(
-                {"user_message": user_message, "session_id": session_id},
-                config=config,
-            )
-            reply = result.get("bot_response", "")
-            
-            # Sync session state IN PLACE from LangGraph result
-            sync_graph_state_to_conversation_state(state, result)
-            return reply
+        # 1. Input Guardrail: Sanitization, Logging PII Redaction, Injection & Abuse Defense
+        curr_prompt = self.state_machine.step_prompt_for(state)
+        input_res = self.input_guardrail.apply(user_message, current_prompt=curr_prompt)
+        logger.info(f"Session {session_id} ingress (sanitized & PII-masked): {input_res.masked_for_logging}")
 
-        # Fallback to direct state machine if LangGraph disabled
-        if self._check_prompt_injection(user_message):
-            curr_prompt = self.state_machine.step_prompt_for(state)
-            deflection = (
+        if not input_res.is_safe:
+            deflection = input_res.deflection_message or (
                 "I am the Ashcombe & Rowe Estates assistant and I am here to help you buy or sell prime property. "
                 f"\n\nNow, {curr_prompt}"
             )
-            state.history.append({"role": "user", "content": user_message})
+            state.history.append({"role": "user", "content": input_res.sanitized_text})
             state.history.append({"role": "assistant", "content": deflection})
             return deflection
 
-        reply = self.state_machine.process_turn(state, user_message)
-        return reply
+        sanitized_msg = input_res.sanitized_text
+
+        # 2. Process via LangGraph (or fallback)
+        if self.use_langgraph:
+            config = {"configurable": {"thread_id": session_id}}
+            result = self.graph.invoke(
+                {"user_message": sanitized_msg, "session_id": session_id},
+                config=config,
+            )
+            raw_reply = result.get("bot_response", "")
+            
+            # Sync session state IN PLACE from LangGraph result
+            sync_graph_state_to_conversation_state(state, result)
+            
+            # 3. Output Guardrail: Secret redaction, Contact Privacy Gatekeeper, Grounding verification
+            output_res = self.output_guardrail.apply(raw_reply, state_context=result)
+            final_reply = output_res.sanitized_output
+
+            # 4. Short-Term Memory Sliding Buffer & Redis Persistence
+            self.memory.add_turn(session_id, "user", sanitized_msg)
+            self.memory.add_turn(session_id, "assistant", final_reply)
+            self.memory.save_session(session_id, state)
+            return final_reply
+
+        # Fallback to direct state machine if LangGraph disabled
+        raw_reply = self.state_machine.process_turn(state, sanitized_msg)
+        state_ctx = {
+            "qualification_status": state.qualification_status.value if hasattr(state.qualification_status, "value") else str(state.qualification_status),
+            "current_step": state.current_step.value if hasattr(state.current_step, "value") else str(state.current_step),
+        }
+        output_res = self.output_guardrail.apply(raw_reply, state_context=state_ctx)
+        final_reply = output_res.sanitized_output
+
+        # 4. Short-Term Memory Sliding Buffer & Redis Persistence
+        self.memory.add_turn(session_id, "user", sanitized_msg)
+        self.memory.add_turn(session_id, "assistant", final_reply)
+        self.memory.save_session(session_id, state)
+        return final_reply
 
     def get_session_state(self, session_id: str) -> Optional[ConversationState]:
         state = self.sessions.get(session_id)
@@ -128,6 +163,16 @@ class LeadQualificationAgent:
             "qualified_leads_count": len(self.get_all_qualified_leads()),
             "llm_status": self.llm.get_provider_status(),
             "tools_registered": [t.name for t in self.tools],
+            "guardrails_active": True,
+            "guardrails_policies": [
+                "InputSanitization (2000-char bound, control char removal, DoS defense)",
+                "PIIRedaction (PCI-DSS payment cards, UK NINO, credential masking for logs)",
+                "PromptInjectionDefense (Jailbreaks, role hijacking, instruction overrides)",
+                "SecretLeakPrevention (API keys, env vars, stack trace redaction)",
+                "ContactPrivacyGatekeeper (Zero pre-qualification contact harvesting)",
+                "GroundingFirewall (Head office canonical 020 7946 0100 verification)",
+            ],
+            "short_term_memory": self.memory.get_status(),
         }
 
 

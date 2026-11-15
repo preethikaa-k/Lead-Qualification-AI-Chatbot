@@ -97,6 +97,26 @@ def run_evaluations() -> Dict[str, Any]:
             ],
             description="New-build buyer in SW10 9RR where only resale exists triggers M2",
         ),
+        # 3b. Lane A: Unqualified M3 (No available new-build at or below budget)
+        ConversationBenchmark(
+            name="Lane A - Unqualified M3 (No available stock <= budget)",
+            lane="A",
+            turns=[
+                "Hi, I'm Charlie",
+                "Buy",
+                "No",
+                "New-build",
+                "£1.1m",
+                "SW3 3RB",  # Lowest available new-build in SW3 3RB is £1,230,000
+            ],
+            expected_status=QualificationStatus.UNQUALIFIED_M3,
+            checks=[
+                lambda a, sid, replies: "matching your requirements" in replies[-1],
+                lambda a, sid, replies: settings.HEAD_OFFICE_PHONE in replies[-1],
+                lambda a, sid, replies: a.get_session_state(sid).lead.phone is None,
+            ],
+            description="New-build buyer with £1.1M budget where lowest available is £1.23M correctly triggers M3 exit",
+        ),
         # 4. Lane B: Qualified Resale Buyer
         ConversationBenchmark(
             name="Lane B - Qualified Resale",

@@ -48,58 +48,6 @@
   },
   "history": [
     {
-      "role": "user",
-      "content": "Hello, I am Sarah"
-    },
-    {
-      "role": "assistant",
-      "content": "Hello Sarah! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?"
-    },
-    {
-      "role": "user",
-      "content": "Buy"
-    },
-    {
-      "role": "assistant",
-      "content": "Do you have a specific property in mind?"
-    },
-    {
-      "role": "user",
-      "content": "No"
-    },
-    {
-      "role": "assistant",
-      "content": "Are you looking for a new-build or a resale home?"
-    },
-    {
-      "role": "user",
-      "content": "New-build"
-    },
-    {
-      "role": "assistant",
-      "content": "What is your budget for the new-build home, Sarah?"
-    },
-    {
-      "role": "user",
-      "content": "\u00a31.5m"
-    },
-    {
-      "role": "assistant",
-      "content": "What is the postcode of your location of interest?"
-    },
-    {
-      "role": "user",
-      "content": "SW3 3RB"
-    },
-    {
-      "role": "assistant",
-      "content": "Great news, Sarah, we have available new-build homes matching your requirements:\n\u2022 Apartment 1, Aldermoor Place - 2 bed apartment at \u00a31,330,000\n\u2022 Apartment 2, Aldermoor Place - 2 bed apartment at \u00a31,230,000\n\nCan I get your phone number so our team can follow up with details?"
-    },
-    {
-      "role": "user",
-      "content": "07123 456789"
-    },
-    {
       "role": "assistant",
       "content": "Thank you! Can I get your email address?"
     },

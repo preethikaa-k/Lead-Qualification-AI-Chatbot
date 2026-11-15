@@ -528,6 +528,78 @@ class FAQRagEngine:
         )
         return None
 
+    def search_faq_multi(self, query: str, top_k: int = 4, threshold: float = 0.58) -> List[FAQItem]:
+        """
+        Multi-chunk Hybrid Retrieval (Chroma Dense Vector + BM25 Sparse Lexical).
+        Retrieves top_k related FAQ entries for complex or multi-part inquiries
+        (e.g., 'tell me about the company', 'what are your fees and branches').
+        """
+        if not query or not self.faqs:
+            return []
+
+        clean_query = query.strip()
+        tokens = bm25_tokenize(clean_query)
+        if len(tokens) == 0:
+            return []
+
+        matched_items: Dict[str, Tuple[float, FAQItem]] = {}
+
+        # 1. Dense Semantic Search (top 6)
+        if self.vector_store is not None:
+            try:
+                results = self.vector_store.similarity_search_with_score(clean_query, k=min(6, len(self.indexed_texts)))
+                for doc, raw_score in results:
+                    meta = doc.metadata
+                    fid = meta.get("faq_id")
+                    if not fid:
+                        continue
+                    if self.vector_store_type == "chroma":
+                        score = max(0.0, min(1.0, 1.0 - float(raw_score)))
+                    else:
+                        score = max(0.0, min(1.0, float(raw_score)))
+                    
+                    if fid not in matched_items or score > matched_items[fid][0]:
+                        item = next((f for f in self.faqs if f.faq_id == fid), None)
+                        if item:
+                            matched_items[fid] = (score, item)
+            except Exception as e:
+                logger.warning(f"Dense multi-search failed: {e}")
+
+        # 2. Sparse Lexical Search (BM25)
+        if self.bm25_retriever is not None:
+            try:
+                q_tokens = bm25_tokenize(clean_query)
+                raw_bm25_scores = self.bm25_retriever.get_scores(q_tokens)
+                if raw_bm25_scores:
+                    top_bm25_indices = np.argsort(raw_bm25_scores)[::-1][:6]
+                    for idx in top_bm25_indices:
+                        b_score = raw_bm25_scores[idx]
+                        if b_score <= 0.0:
+                            continue
+                        norm_b = min(1.0, b_score / (b_score + 3.0))
+                        meta = self.indexed_metadatas[idx]
+                        fid = meta.get("faq_id")
+                        if not fid:
+                            continue
+                        if fid in matched_items:
+                            prev_score, it = matched_items[fid]
+                            matched_items[fid] = (0.60 * prev_score + 0.40 * norm_b + 0.10, it)
+                        else:
+                            item = next((f for f in self.faqs if f.faq_id == fid), None)
+                            if item:
+                                matched_items[fid] = (norm_b, item)
+            except Exception as e:
+                logger.warning(f"BM25 multi-search failed: {e}")
+
+        # Filter by threshold and rank descending
+        ranked = sorted(matched_items.values(), key=lambda x: x[0], reverse=True)
+        filtered = [item for score, item in ranked if score >= threshold]
+
+        if not ranked or ranked[0][0] < threshold:
+            return []
+
+        return filtered[:top_k]
+
     def get_faq_answer(self, query: str) -> Optional[str]:
         item = self.search_faq(query)
         if item:

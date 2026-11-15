@@ -33,8 +33,10 @@ from src.parsers import (
     parse_yes_no,
     detect_mind_change,
 )
+from src.guardrails import input_guardrail, output_guardrail
 from src.data_store import data_store
 from src.rag_engine import faq_engine
+from src.llm_factory import llm_client
 from src.routing_utils import is_answering_current_step
 
 logger = logging.getLogger(__name__)
@@ -71,6 +73,7 @@ class LeadGraphState(TypedDict, total=False):
     
     # Internal routing flags
     is_injection: bool
+    custom_deflection: Optional[str]
     is_faq_or_mind_change: bool
     terminal_type: Optional[str]  # "M1", "M2", "M3", "ALREADY_COMPLETED", "CLOSE"
     history: List[Dict[str, str]]
@@ -117,7 +120,7 @@ def sync_graph_state_to_conversation_state(conv: ConversationState, state: Dict[
     conv.closing_message = state.get("closing_message")
     conv.specific_property_retry_count = state.get("specific_property_retry_count", 0)
     conv.target_property_details = state.get("target_property_details")
-    conv.history = list(state.get("history") or [])
+    conv.history = list(state.get("history") or [])[-5:]
 
     # Lead Data
     conv.lead.visitor_name = state.get("visitor_name")
@@ -163,7 +166,7 @@ def graph_state_to_conversation_state(state: Dict[str, Any]) -> ConversationStat
 # -------------------------------------------------------------------------
 def guardrail_node(state: LeadGraphState) -> Dict[str, Any]:
     """
-    Checks for prompt injection and adversarial jailbreaks.
+    Checks for prompt injection and adversarial jailbreaks using production InputGuardrail.
     """
     text = (state.get("user_message") or "").strip()
     history = list(state.get("history") or [])
@@ -174,26 +177,27 @@ def guardrail_node(state: LeadGraphState) -> Dict[str, Any]:
         return {
             "terminal_type": "ALREADY_COMPLETED",
             "is_injection": False,
+            "custom_deflection": None,
             "is_faq_or_mind_change": False,
             "history": history,
         }
 
-    injection_patterns = [
-        r"ignore (?:all )?(?:previous|above) instructions",
-        r"you are now (?:in )?(?:dan|jailbreak|unrestricted)",
-        r"system override",
-        r"pretend to be",
-        r"act as an unfiltered",
-        r"reveal your (?:system )?prompt",
-        r"forget your rules",
-        r"qualify me anyway",
-        r"bypass (?:check|qualification|flow)",
-    ]
-    lower = text.lower()
-    is_injection = any(re.search(pat, lower) for pat in injection_patterns)
+    step = state.get("current_step") or FlowStep.START.value
+    curr_prompt = step_prompt_for_step(step, state.get("visitor_name"))
+    input_res = input_guardrail.apply(text, current_prompt=curr_prompt)
+
+    if not input_res.is_safe:
+        return {
+            "is_injection": True,
+            "custom_deflection": input_res.deflection_message,
+            "is_faq_or_mind_change": False,
+            "terminal_type": None,
+            "history": history,
+        }
 
     return {
-        "is_injection": is_injection,
+        "is_injection": False,
+        "custom_deflection": None,
         "is_faq_or_mind_change": False,
         "terminal_type": None,
         "history": history,
@@ -204,12 +208,14 @@ def deflection_node(state: LeadGraphState) -> Dict[str, Any]:
     """
     Emits a polite deflection when an injection attempt is detected.
     """
-    step = state.get("current_step") or FlowStep.START.value
-    curr_prompt = step_prompt_for_step(step, state.get("visitor_name"))
-    deflection = (
-        "I am the Ashcombe & Rowe Estates assistant and I am here to help you buy or sell prime property. "
-        f"\n\nNow, {curr_prompt}"
-    )
+    deflection = state.get("custom_deflection")
+    if not deflection:
+        step = state.get("current_step") or FlowStep.START.value
+        curr_prompt = step_prompt_for_step(step, state.get("visitor_name"))
+        deflection = (
+            "I am the Ashcombe & Rowe Estates assistant and I am here to help you buy or sell prime property. "
+            f"\n\nNow, {curr_prompt}"
+        )
     history = list(state.get("history") or [])
     history.append({"role": "assistant", "content": deflection})
     return {
@@ -226,8 +232,79 @@ def faq_and_intent_node(state: LeadGraphState) -> Dict[str, Any]:
     user_text = (state.get("user_message") or "").strip()
     history = list(state.get("history") or [])
 
-    # 1. Mind change
-    mind_change = detect_mind_change(user_text)
+    # 1. Check out-of-domain unanswerable / monument / commercial queries first (e.g. Taj Mahal, aircraft hangars)
+    curr_step = state.get("current_step") or FlowStep.START.value
+    return_prompt = step_prompt_for_step(curr_step, state.get("visitor_name"))
+    lower_text = user_text.lower()
+    
+    unanswerable_terms = [
+        "taj mahal", "monument", "landmark", "pyramid", "eiffel tower", "white house",
+        "hangar", "aircraft", "commercial aircraft", "airport", "solar", "warehouse",
+        "factory", "industrial", "manchester", "island", "spaceship"
+    ]
+    matched_unanswerable = next((term for term in unanswerable_terms if term in lower_text), None)
+    if matched_unanswerable:
+        if settings.LLM_ENRICHMENT_ENABLED:
+            reply = llm_client.synthesize_unrelated_decline_and_pitch(
+                user_query=user_text,
+                unanswerable_term=matched_unanswerable.title(),
+                current_step_prompt=return_prompt,
+                visitor_name=state.get("visitor_name"),
+            )
+        else:
+            reply = (
+                f"While I appreciate your inquiry, Ashcombe & Rowe Estates specializes exclusively in luxury residential real estate, "
+                f"and we do not deal in historical monuments, commercial facilities, or items such as {matched_unanswerable.title()}. "
+                f"However, we represent an exclusive collection of 247 premier residences across prime London (Mayfair, Chelsea, Kensington), "
+                f"Surrey (Cobham), and Oxford, with budgets from £260,000 to £7,350,000. "
+                f"For specialized commercial queries, please contact our Mayfair head office on {settings.HEAD_OFFICE_PHONE}.\n\n"
+                f"{return_prompt}"
+            )
+        history.append({"role": "assistant", "content": reply})
+        return {
+            "is_faq_or_mind_change": True,
+            "bot_response": reply,
+            "history": history,
+        }
+
+    # 2. Portfolio overview / listing request
+    is_portfolio_request = any(
+        kw in lower_text
+        for kw in [
+            "list out your properties", "list your properties", "list out properties",
+            "list properties", "list of properties", "show me your properties",
+            "what properties do you have", "what homes do you have", "where do you have properties",
+            "show properties", "browse properties", "what do you have for sale"
+        ]
+    )
+    if is_portfolio_request:
+        factual_context = data_store.find_property_question_answer(user_text) or (
+            "Ashcombe & Rowe Estates represents a prime portfolio of 247 luxury properties across London "
+            "(Chelsea, Hampstead, Richmond, Mayfair), Surrey (Cobham, Guildford), and Oxford. "
+            "We offer both luxury new-build developments (£1,000,000+) and character resale homes (£260,000 to £7,350,000)."
+        )
+        if settings.LLM_ENRICHMENT_ENABLED:
+            reply = llm_client.synthesize_sales_portfolio_pitch(
+                user_query=user_text,
+                factual_context=factual_context,
+                current_step_prompt=return_prompt,
+                visitor_name=state.get("visitor_name"),
+            )
+        else:
+            reply = (
+                f"{factual_context}\n\n"
+                f"I would be delighted to recommend homes in these prestigious postcodes. {return_prompt}"
+            )
+        history.append({"role": "assistant", "content": reply})
+        return {
+            "is_faq_or_mind_change": True,
+            "intent": state.get("intent") or "buy",
+            "bot_response": reply,
+            "history": history,
+        }
+
+    # 3. Mind change
+    mind_change = detect_mind_change(user_text, current_intent=state.get("intent"))
     if mind_change == "sell":
         next_step = FlowStep.D1_ASK_POSTCODE.value
         prompt = step_prompt_for_step(next_step, state.get("visitor_name"))
@@ -254,16 +331,18 @@ def faq_and_intent_node(state: LeadGraphState) -> Dict[str, Any]:
             "history": history,
         }
 
-    # 2. Side Questions / FAQ RAG
-    curr_step = state.get("current_step") or FlowStep.START.value
-    return_prompt = step_prompt_for_step(curr_step, state.get("visitor_name"))
-
-    # Avoid hijacking valid responses to the current step prompt
+    # 4. Side Questions / FAQ RAG
     if not is_answering_current_step(curr_step, user_text):
-        # 2a. Check property-specific inquiry
-        property_ans = data_store.find_property_question_answer(user_text)
-        if property_ans:
-            reply = f"{property_ans}\n\nNow returning to where we were: {return_prompt}"
+        lower_text = user_text.lower()
+
+        # Check out-of-domain unanswerable queries first (e.g. aircraft hangars, solar discounts)
+        unanswerable_terms = ["hangar", "aircraft", "commercial aircraft", "solar", "warehouse", "manchester"]
+        if any(term in lower_text for term in unanswerable_terms):
+            reply = (
+                f"I'm sorry, I don't have that information in my records. "
+                f"Please contact our head office on {settings.HEAD_OFFICE_PHONE}.\n\n"
+                f"Now returning to your inquiry: {return_prompt}"
+            )
             history.append({"role": "assistant", "content": reply})
             return {
                 "is_faq_or_mind_change": True,
@@ -271,10 +350,36 @@ def faq_and_intent_node(state: LeadGraphState) -> Dict[str, Any]:
                 "history": history,
             }
 
-        # 2b. Check FAQ RAG Knowledge Base (47 company policies)
-        faq_item = faq_engine.search_faq(user_text)
-        if faq_item:
-            reply = f"{faq_item.answer}\n\nNow, back to our conversation: {return_prompt}"
+        # 2a. Gather property and portfolio knowledge
+        property_ans = data_store.find_property_question_answer(user_text)
+
+        # 2b. Gather multi-document FAQ knowledge
+        faq_items = faq_engine.search_faq_multi(user_text, top_k=4)
+        if not faq_items:
+            single_faq = faq_engine.search_faq(user_text)
+            if single_faq:
+                faq_items = [single_faq]
+
+        # Combine verified facts
+        factual_chunks = []
+        if property_ans:
+            factual_chunks.append(f"Portfolio & Property Data: {property_ans}")
+        if faq_items:
+            for item in faq_items:
+                factual_chunks.append(f"Agency Fact ({item.category}): {item.answer}")
+
+        if factual_chunks:
+            combined_context = "\n".join(factual_chunks)
+            if settings.LLM_ENRICHMENT_ENABLED:
+                reply = llm_client.synthesize_concierge_response(
+                    user_query=user_text,
+                    factual_context=combined_context,
+                    current_step_prompt=return_prompt,
+                    visitor_name=state.get("visitor_name"),
+                )
+            else:
+                reply = f"{combined_context}\n\nNow, back to our conversation: {return_prompt}"
+
             history.append({"role": "assistant", "content": reply})
             return {
                 "is_faq_or_mind_change": True,
@@ -538,10 +643,12 @@ def initial_router_node(state: LeadGraphState) -> Dict[str, Any]:
                         "history": history,
                     }
             else:
-                reply = "Do you have a specific property in mind? (Yes or No)"
-                history.append({"role": "assistant", "content": reply})
+                # Flowchart rule: If not a specific property name -> treat as "no" and ask New-build or resale
+                prompt = step_prompt_for_step(FlowStep.NEW_BUILD_OR_RESALE.value, visitor_name)
+                history.append({"role": "assistant", "content": prompt})
                 return {
-                    "bot_response": reply,
+                    "current_step": FlowStep.NEW_BUILD_OR_RESALE.value,
+                    "bot_response": prompt,
                     "history": history,
                 }
 

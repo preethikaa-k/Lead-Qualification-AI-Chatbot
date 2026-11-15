@@ -206,20 +206,139 @@ class EstateDataStore:
 
     def find_property_question_answer(self, query: str) -> Optional[str]:
         """
-        If a user asks a question about a specific property anywhere in the flow,
-        looks up the property in properties_for_buyers.csv and returns factual info.
+        Answers factual questions about properties and agency coverage:
+        1. Specific property lookup by title/address
+        2. Broad portfolio inquiries (locations, towns, price ranges, property types)
+        3. Town-specific property inquiries (e.g., Richmond, Cobham, Chelsea, Oxford)
+        4. Property type inquiries (e.g., penthouses, cottages, townhouses)
+        5. Seller service and postcode coverage inquiries
         """
-        props = self.search_specific_property(query)
-        if not props:
+        if not query:
+            return None
+        
+        q_lower = query.lower().strip()
+
+        # Reject out-of-domain or commercial non-residential queries to trigger head office fallback
+        out_of_domain = ["aircraft", "hangar", "commercial", "manchester", "solar", "warehouse", "factory", "industrial"]
+        if any(term in q_lower for term in out_of_domain):
             return None
 
-        p = props[0]
-        return (
-            f"{p.property_name} ({p.address}, {p.town} {p.postcode}): "
-            f"A {p.bedrooms}-bedroom, {p.bathrooms}-bathroom {p.property_type.lower()} listed at £{p.price_gbp:,}. "
-            f"Current status: {p.status.replace('_', ' ')}. "
-            f"Description: {p.description}"
-        )
+        # 1. Check for specific named property match first
+        props = self.search_specific_property(query)
+        if props:
+            p = props[0]
+            return (
+                f"{p.property_name} ({p.address}, {p.town} {p.postcode}): "
+                f"A {p.bedrooms}-bedroom, {p.bathrooms}-bathroom {p.property_type.lower()} listed at £{p.price_gbp:,}. "
+                f"Current status: {p.status.replace('_', ' ')}. "
+                f"Description: {p.description}"
+            )
+
+        # 2. Check for town-specific inquiries (London, Chelsea, Hampstead, Richmond, Guildford, Cobham, Oxford)
+        known_towns = {
+            "chelsea": ("Chelsea", "London"),
+            "hampstead": ("Hampstead", "London"),
+            "richmond": ("Richmond", "London"),
+            "cobham": ("Cobham", "Surrey"),
+            "guildford": ("Guildford", "Surrey"),
+            "oxford": ("Oxford", "Oxfordshire"),
+            "london": ("London", "London"),
+            "surrey": ("Surrey", "Surrey"),
+        }
+        for kw, (town_name, region) in known_towns.items():
+            if re.search(rf"\b{kw}\b", q_lower):
+                matched_town_props = [
+                    p for p in self.properties
+                    if (town_name.lower() in p.town.lower() or town_name.lower() in p.address.lower() or kw in p.address.lower())
+                ]
+                if matched_town_props:
+                    avail = [p for p in matched_town_props if p.status == PropertyStatus.AVAILABLE.value]
+                    new_b = [p for p in avail if p.listing_category == ListingCategory.NEW_BUILD.value]
+                    resale = [p for p in avail if p.listing_category == ListingCategory.RESALE.value]
+                    prices = [p.price_gbp for p in avail] if avail else [p.price_gbp for p in matched_town_props]
+                    min_p, max_p = min(prices), max(prices)
+                    types = sorted(list(set(p.property_type for p in avail or matched_town_props)))
+                    
+                    sample_names = ", ".join([f"'{p.property_name}' (£{p.price_gbp:,})" for p in (avail[:2] or matched_town_props[:2])])
+                    return (
+                        f"In {town_name} ({region}), we have {len(matched_town_props)} total listings "
+                        f"({len(avail)} currently available: {len(new_b)} new-builds, {len(resale)} resales). "
+                        f"Prices range from £{min_p:,} to £{max_p:,}, featuring {', '.join(types[:3])}. "
+                        f"Notable properties include {sample_names}."
+                    )
+
+        # 3. Check for specific property type inquiries (penthouse, cottage, townhouse, apartment)
+        property_types = {
+            "penthouse": "Penthouse",
+            "cottage": "Cottage",
+            "townhouse": "Townhouse",
+            "detached": "Detached house",
+            "semi-detached": "Semi-detached house",
+            "apartment": "Apartment",
+            "flat": "Apartment",
+        }
+        for kw, p_type in property_types.items():
+            if re.search(rf"\b{kw}\b", q_lower):
+                matched_type_props = [p for p in self.properties if p.property_type.lower() == p_type.lower()]
+                avail_type = [p for p in matched_type_props if p.status == PropertyStatus.AVAILABLE.value]
+                if matched_type_props:
+                    locations = sorted(list(set(p.town for p in matched_type_props)))
+                    prices = [p.price_gbp for p in (avail_type or matched_type_props)]
+                    return (
+                        f"We represent {len(matched_type_props)} {p_type.lower()} listings ({len(avail_type)} available) "
+                        f"across {', '.join(locations)}. "
+                        f"Prices range from £{min(prices):,} to £{max(prices):,}."
+                    )
+
+        # 4. Check for broad location / portfolio / coverage inquiries
+        location_keywords = [
+            "where do you have properties",
+            "where are your properties",
+            "what properties do you have",
+            "what areas do you cover",
+            "which areas do you cover",
+            "what locations",
+            "where do you operate",
+            "where can i buy",
+            "what houses do you have",
+            "where are you located",
+            "show me your properties",
+            "list out your properties",
+            "list your properties",
+            "list out properties",
+            "list properties",
+            "list of properties",
+            "what do you have for sale",
+            "what homes do you have",
+            "available properties",
+            "browse properties",
+            "portfolio",
+            "price range",
+        ]
+        if any(kw in q_lower for kw in location_keywords) or (
+            ("where" in q_lower or "what" in q_lower or "which" in q_lower) and ("propert" in q_lower or "house" in q_lower or "home" in q_lower)
+        ):
+            avail_all = [p for p in self.properties if p.status == PropertyStatus.AVAILABLE.value]
+            prices = [p.price_gbp for p in self.properties]
+            return (
+                f"Ashcombe & Rowe Estates represents a prime portfolio of 247 luxury properties "
+                f"across London (Chelsea, Hampstead, and Richmond), Surrey (Cobham and Guildford), and Oxford. "
+                f"We offer both luxury new-build developments (priced at £1,000,000 and above) "
+                f"and character resale homes (ranging from £260,000 to £7,350,000). "
+                f"Our collection includes penthouses, detached family houses, townhouses, and cottages."
+            )
+
+        # 5. Check for seller coverage and valuation inquiries
+        seller_keywords = ["seller", "selling", "valuation", "sell my home", "commission", "selling fee"]
+        if any(kw in q_lower for kw in seller_keywords) and ("fee" in q_lower or "area" in q_lower or "coverage" in q_lower or "how" in q_lower or "cost" in q_lower):
+            return (
+                f"For sellers, Ashcombe & Rowe Estates accepts homes for sale across 100 prime UK postcodes "
+                f"in London, Surrey, and Oxford. We provide a complimentary, no-obligation market valuation, "
+                f"bespoke architectural photography and floorplans. Our commission fee is 1.5% + VAT on a sole-agency basis, "
+                f"or 2.5% + VAT for multi-agency instructions, with no upfront fees."
+            )
+
+        return None
 
 
 # Global singleton instance

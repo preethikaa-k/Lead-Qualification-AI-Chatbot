@@ -28,6 +28,7 @@ from src.parsers import (
 )
 from src.data_store import data_store
 from src.rag_engine import faq_engine
+from src.llm_factory import llm_client
 from src.routing_utils import is_answering_current_step
 
 logger = logging.getLogger(__name__)
@@ -66,23 +67,95 @@ class LeadQualificationStateMachine:
     def handle_side_question_or_faq(self, user_text: str, state: ConversationState) -> Optional[str]:
         """
         Checks if the input is a company, branch, or property question.
-        Returns the answer + return prompt if so, else None.
+        Returns the synthesized answer + return prompt if so, else None.
         """
-        # 1. Check for specific property question
-        property_answer = self.data_store.find_property_question_answer(user_text)
-        if property_answer:
-            return_prompt = self.step_prompt_for(state)
-            return f"{property_answer}\n\nNow returning to where we were: {return_prompt}"
+        return_prompt = self.step_prompt_for(state)
+        lower_text = user_text.lower()
 
-        # 2. Check FAQ RAG
-        faq_item = self.faq_engine.search_faq(user_text)
-        if faq_item:
-            return_prompt = self.step_prompt_for(state)
-            return f"{faq_item.answer}\n\nNow, back to our conversation: {return_prompt}"
+        # Check out-of-domain unanswerable queries first (e.g. aircraft hangars, solar discounts, Taj Mahal)
+        unanswerable_terms = [
+            "taj mahal", "monument", "landmark", "pyramid", "eiffel tower", "white house",
+            "hangar", "aircraft", "commercial aircraft", "airport", "solar", "warehouse",
+            "factory", "industrial", "manchester", "island", "spaceship"
+        ]
+        matched_unanswerable = next((term for term in unanswerable_terms if term in lower_text), None)
+        if matched_unanswerable:
+            if settings.LLM_ENRICHMENT_ENABLED:
+                return llm_client.synthesize_unrelated_decline_and_pitch(
+                    user_query=user_text,
+                    unanswerable_term=matched_unanswerable.title(),
+                    current_step_prompt=return_prompt,
+                    visitor_name=state.lead.visitor_name,
+                )
+            return (
+                f"While I appreciate your inquiry, Ashcombe & Rowe Estates specializes exclusively in luxury residential real estate, "
+                f"and we do not deal in historical monuments, commercial facilities, or items such as {matched_unanswerable.title()}. "
+                f"However, we represent an exclusive collection of 247 premier residences across prime London (Mayfair, Chelsea, Kensington), "
+                f"Surrey (Cobham), and Oxford, with budgets from £260,000 to £7,350,000. "
+                f"For specialized commercial queries, please contact our Mayfair head office on {settings.HEAD_OFFICE_PHONE}.\n\n"
+                f"{return_prompt}"
+            )
+
+        # Check for portfolio overview / listing requests
+        is_portfolio_request = any(
+            kw in lower_text
+            for kw in [
+                "list out your properties", "list your properties", "list out properties",
+                "list properties", "list of properties", "show me your properties",
+                "what properties do you have", "what homes do you have", "where do you have properties",
+                "show properties", "browse properties", "what do you have for sale"
+            ]
+        )
+        if is_portfolio_request:
+            property_answer = self.data_store.find_property_question_answer(user_text) or (
+                "Ashcombe & Rowe Estates represents a prime portfolio of 247 luxury properties "
+                "across London (Chelsea, Hampstead, Richmond, Mayfair), Surrey (Cobham, Guildford), and Oxford. "
+                "We offer both luxury new-build developments (£1,000,000+) and character resale homes (£260,000 to £7,350,000)."
+            )
+            if settings.LLM_ENRICHMENT_ENABLED:
+                return llm_client.synthesize_sales_portfolio_pitch(
+                    user_query=user_text,
+                    factual_context=property_answer,
+                    current_step_prompt=return_prompt,
+                    visitor_name=state.lead.visitor_name,
+                )
+            return (
+                f"{property_answer}\n\n"
+                f"I would be delighted to recommend homes in these prestigious postcodes. {return_prompt}"
+            )
+
+        # 1. Gather property and portfolio knowledge
+        property_answer = self.data_store.find_property_question_answer(user_text)
+
+        # 2. Gather multi-document FAQ knowledge
+        faq_items = self.faq_engine.search_faq_multi(user_text, top_k=4)
+        if not faq_items:
+            single_faq = self.faq_engine.search_faq(user_text)
+            if single_faq:
+                faq_items = [single_faq]
+
+        # Combine verified facts
+        factual_chunks = []
+        if property_answer:
+            factual_chunks.append(f"Portfolio & Property Data: {property_answer}")
+        if faq_items:
+            for item in faq_items:
+                factual_chunks.append(f"Agency Fact ({item.category}): {item.answer}")
+
+        if factual_chunks:
+            combined_context = "\n".join(factual_chunks)
+            if settings.LLM_ENRICHMENT_ENABLED:
+                return llm_client.synthesize_concierge_response(
+                    user_query=user_text,
+                    factual_context=combined_context,
+                    current_step_prompt=return_prompt,
+                    visitor_name=state.lead.visitor_name,
+                )
+            return f"{combined_context}\n\nNow, back to our conversation: {return_prompt}"
 
         # 3. Check if user is asking a clear company question not in FAQ (out of domain)
         lower_text = user_text.lower()
-        question_words = ["who", "what", "where", "when", "why", "how", "do you", "can you", "are you", "tell me", "is there"]
+        question_words = ["who", "what", "where", "when", "why", "how", "which", "do you", "can you", "are you", "tell me", "is there", "can i", "do i", "could you"]
         has_question = any(lower_text.startswith(qw) for qw in question_words) or "?" in user_text
         agency_terms = [
             "branch", "office", "fee", "hours", "sunday", "helen", "david",
@@ -91,7 +164,6 @@ class LeadQualificationStateMachine:
         ]
 
         if has_question and any(term in lower_text for term in agency_terms):
-            return_prompt = self.step_prompt_for(state)
             return (
                 f"I'm sorry, I don't have that information in my records. "
                 f"Please contact our head office on {settings.HEAD_OFFICE_PHONE}.\n\n"
@@ -113,8 +185,15 @@ class LeadQualificationStateMachine:
             state.history.append({"role": "assistant", "content": msg})
             return msg
 
+        # Check for side questions (FAQ / Property inquiry / Unrelated queries)
+        if not is_answering_current_step(state.current_step, user_text):
+            side_ans = self.handle_side_question_or_faq(user_text, state)
+            if side_ans:
+                state.history.append({"role": "assistant", "content": side_ans})
+                return side_ans
+
         # Check for mid-conversation mind-change (e.g. switch from buying to selling)
-        mind_change = detect_mind_change(user_text)
+        mind_change = detect_mind_change(user_text, current_intent=state.lead.intent)
         if mind_change:
             if mind_change == "sell":
                 state.lane = "D"
@@ -129,13 +208,6 @@ class LeadQualificationStateMachine:
                 response = f"Certainly! Let's look for a home to buy. {self.step_prompt_for(state)}"
                 state.history.append({"role": "assistant", "content": response})
                 return response
-
-        # Check for side questions (FAQ / Property inquiry)
-        if not is_answering_current_step(state.current_step, user_text):
-            side_ans = self.handle_side_question_or_faq(user_text, state)
-            if side_ans:
-                state.history.append({"role": "assistant", "content": side_ans})
-                return side_ans
 
         # Process standard flow according to current step
         step = state.current_step
@@ -236,7 +308,9 @@ class LeadQualificationStateMachine:
                     state.lead.category = "specific_property"
                     response = self._handle_lane_c_match(state, props[0])
                 else:
-                    response = "Do you have a specific property in mind? (Yes or No)"
+                    # Flowchart rule: If not a specific property name -> treat as "no" and ask New-build or resale
+                    state.current_step = FlowStep.NEW_BUILD_OR_RESALE
+                    response = self.step_prompt_for(state)
 
         # --- STEP: NEW_BUILD_OR_RESALE ---
         elif step == FlowStep.NEW_BUILD_OR_RESALE:

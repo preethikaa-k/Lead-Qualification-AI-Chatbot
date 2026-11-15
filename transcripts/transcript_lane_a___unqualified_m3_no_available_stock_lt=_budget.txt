@@ -1,0 +1,15 @@
+=== Lane A - Unqualified M3 (No available stock <= budget) ===
+Lane: A | Result: PASS
+Final Qualification Status: UNQUALIFIED_M3
+--------------------------------------------------
+
+BOT: What is your budget for the new-build home, Charlie?
+
+VISITOR: £1.1m
+
+BOT: What is the postcode of your location of interest?
+
+VISITOR: SW3 3RB
+
+BOT: Sorry, we have no available homes matching your requirements right now. You can reach our head office on 020 7946 0100. Goodbye.
+

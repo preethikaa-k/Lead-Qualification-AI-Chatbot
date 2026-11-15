@@ -3,16 +3,6 @@ Lane: A | Result: PASS
 Final Qualification Status: UNQUALIFIED_M1
 --------------------------------------------------
 
-VISITOR: Hi, I'm Oliver
-
-BOT: Hello Oliver! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?
-
-VISITOR: Buy
-
-BOT: Do you have a specific property in mind?
-
-VISITOR: No
-
 BOT: Are you looking for a new-build or a resale home?
 
 VISITOR: New-build

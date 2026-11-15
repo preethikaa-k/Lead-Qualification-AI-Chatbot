@@ -25,7 +25,43 @@ def is_answering_current_step(curr_step: Union[str, FlowStep], user_text: str) -
     step_val = curr_step.value if isinstance(curr_step, FlowStep) else curr_step
     lower = user_text.lower().strip()
 
-    is_explicit_q = "?" in user_text or any(
+    inquiry_phrases = [
+        "i want to know",
+        "i'd like to know",
+        "i would like to know",
+        "i want to ask",
+        "i have a question",
+        "tell me more",
+        "more about your",
+        "about your company",
+        "about the company",
+        "information about",
+        "info on",
+        "about your fees",
+        "about your properties",
+        "where are your",
+        "where do you",
+        "what properties do you",
+        "tell me about",
+        "can you tell me",
+        "could you tell me",
+        "can you explain",
+        "know more about",
+        "what kind of",
+        "who are you",
+        "list out",
+        "list your",
+        "list properties",
+        "show me your",
+        "taj mahal",
+        "hangar",
+        "aircraft",
+        "warehouse",
+        "commercial",
+        "solar",
+        "monument",
+    ]
+    starts_with_q = any(
         lower.startswith(w + " ") or lower == w
         for w in [
             "who",
@@ -36,17 +72,25 @@ def is_answering_current_step(curr_step: Union[str, FlowStep], user_text: str) -
             "how",
             "can i",
             "can you",
+            "could you",
             "do you",
             "is there",
+            "are there",
             "are you",
             "tell me",
         ]
     )
+    is_explicit_q = "?" in user_text or starts_with_q or any(phrase in lower for phrase in inquiry_phrases)
 
-    if step_val in (FlowStep.START.value, FlowStep.ASK_NAME.value):
+    if step_val == FlowStep.START.value:
         if is_explicit_q:
             return False
-        return bool(parse_name(user_text))
+        return True
+
+    elif step_val == FlowStep.ASK_NAME.value:
+        if is_explicit_q:
+            return False
+        return parse_name(user_text) is not None
 
     elif step_val == FlowStep.BUY_OR_SELL.value:
         if is_explicit_q:
@@ -58,6 +102,14 @@ def is_answering_current_step(curr_step: Union[str, FlowStep], user_text: str) -
             return False
         yn = parse_yes_no(user_text)
         if yn is not None or "yes" in lower or "no" in lower:
+            return True
+        non_specific_markers = [
+            "buy a home", "buy a house", "buy a property", "buy a flat",
+            "looking to buy", "want to buy", "looking for a home", "looking for a house",
+            "just looking", "any property", "no specific", "not specific", "haven't decided",
+            "show me what you have", "what do you have", "not yet", "don't know", "none"
+        ]
+        if any(marker in lower for marker in non_specific_markers):
             return True
         return bool(data_store.search_specific_property(user_text))
 

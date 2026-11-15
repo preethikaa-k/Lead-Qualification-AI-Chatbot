@@ -116,6 +116,61 @@ flowchart TD
 
 ---
 
+## Production Input & Output Guardrails (User Data Protection & System Safety)
+
+To safeguard customer privacy, comply with UK GDPR / Data Protection Act 2018 / PCI-DSS, and defend against adversarial model attacks, the system incorporates enterprise-grade **Input and Output Guardrails** (`src/guardrails.py`):
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        INGRESS (INPUT GUARDRAILS)                      │
+│                                                                        │
+│  [User Message] ──► 1. Bounds & Sanitization (2,000 char cap, no \x00) │
+│                 ──► 2. PII Redaction for Telemetry & Audit Logs        │
+│                        • Personal Contact: [REDACTED_PHONE_NUMBER]     │
+│                        • Email Address:    [REDACTED_EMAIL]            │
+│                        • Payment Cards:    [REDACTED_PAYMENT_CARD]     │
+│                        • UK National Ins.: [REDACTED_UK_NINO]          │
+│                        • Credentials:      [REDACTED_CREDENTIAL]       │
+│                 ──► 3. Prompt Injection & Jailbreak Defense            │
+│                        • Blocks "ignore instructions", "DAN", override │
+│                 ──► 4. Abusive Language De-escalation Filter           │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ (Sanitized & Clean Payload)
+                                    ▼
+                     [LangGraph StateGraph Engine]
+                                    │
+                                    ▼ (Raw Model Response)
+┌───────────────────────────────────┴────────────────────────────────────┐
+│                        EGRESS (OUTPUT GUARDRAILS)                      │
+│                                                                        │
+│  [Bot Reply]    ──► 1. Secret Leak Prevention                          │
+│                        • Redacts API keys (AIzaSy..., sk-...)          │
+│                        • Intercepts environment variables & traces     │
+│                 ──► 2. Contact Privacy Gatekeeper                      │
+│                        • Blocks phone/email requests if UNQUALIFIED    │
+│                 ──► 3. Head Office Grounding Firewall                  │
+│                        • Validates official phone: 020 7946 0100       │
+│                 ──► 4. Output Formatting & Clean Demarcation           │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+                         [Safe Response to Visitor]
+```
+
+### Ingress Guardrail Rules (`InputGuardrail`)
+1. **Length & Byte Sanitization**: Bounds input text to 2,000 characters and strips non-printable control characters/null bytes to defend against token denial-of-service and buffer poisoning.
+2. **PII Masking for Telemetry & Logging**: Scans for personal contact details (mobile phone numbers, UK & international telephone numbers, email addresses), financial credit card numbers (Visa, Mastercard, Amex), UK National Insurance (NINO) numbers, and passwords/API keys before writing user turns to terminal logs or observability pipelines. Real contact data is preserved exclusively in sanitized state memory for verified leads in Lane E.
+3. **Prompt Injection & Jailbreak Defense**: Detects adversarial directives (`ignore previous instructions`, `you are now DAN`, `forget your rules`, system prompt extraction attacks, and LLM delimiter tokens) and returns a polite deflection that keeps the conversation strictly on track.
+4. **Abusive Language Filter**: Calmly de-escalates inappropriate or offensive visitor queries.
+
+### Egress Guardrail Rules (`OutputGuardrail`)
+1. **Secret & Key Leak Prevention**: Guarantees that internal system keys (e.g. `GEMINI_API_KEY`), database connection strings, or system prompt instructions are never leaked in bot responses.
+2. **Contact Privacy Gatekeeper**: Enforces that phone numbers or email addresses are **NEVER** solicited or extracted if the visitor has not met qualification criteria (preventing contact harvesting for disqualified or in-progress visitors).
+3. **Head Office Telephone Grounding**: Verifies that any contact telephone emitted in M1, M2, or M3 messages strictly matches the head office number **`020 7946 0100`** with zero hallucination.
+4. **Formatting Cleanser**: Removes any accidental LLM role prefixes (`Bot:`, `Assistant:`, system delimiters) and prevents mid-dialogue greeting repetition.
+
+---
+
 ## Lead Qualification Flowchart & Deterministic Gatekeeper
 
 The qualification workflow faithfully implements the business specifications across all 5 operational lanes:
@@ -157,6 +212,50 @@ Following project standardization, **Chroma DB** is used as the dedicated, produ
 2. **Native Cosine Normalization**: Built-in HNSW index with cosine distance provides clean, bounded similarity scores for deterministic thresholding.
 3. **Cross-Platform Stability**: Fully packaged wheels with zero C++ toolchain compilation headaches across Windows, Linux, and macOS.
 4. **Native LangChain Integration**: Directly supported via official `langchain-chroma` package.
+
+---
+
+## Short-Term Memory & Distributed Redis Session Store
+
+To deliver high-speed, horizontally scalable multi-turn qualification dialogues without token explosion or session loss across server restarts, the system includes a dedicated **Short-Term Memory & Redis Session Engine** (`src/memory.py`):
+
+```
+                       [Incoming User Turn]
+                                │
+                                ▼
+         ┌─────────────────────────────────────────────┐
+         │ Short-Term Sliding-Window Memory Manager    │
+         │ • Window size: 10 turns (configurable)      │
+         │ • Evicts oldest exchanges (zero token bloat)│
+         │ • Formats clean dialogue context for LLM    │
+         └──────────────────────┬──────────────────────┘
+                                │
+                                ▼
+         ┌─────────────────────────────────────────────┐
+         │ Distributed Redis Session Store             │
+         │ • Key: ashcombe:session:<session_id>        │
+         │ • Automatic TTL: 86,400s (24 hours)         │
+         │ • High-performance JSON serialization      │
+         └──────────────────────┬──────────────────────┘
+                                │
+            ┌───────────────────┴───────────────────┐
+            ▼ (Redis Online)                        ▼ (Redis Offline)
+ ┌─────────────────────────────┐         ┌─────────────────────────────┐
+ │ Primary: Distributed Redis  │         │ Fallback: Ultra-fast        │
+ │ Cluster Persistence         │         │ In-Memory Session Cache     │
+ │ (Multi-pod horizontal scale)│         │ (Zero-crash resilience)     │
+ └─────────────────────────────┘         └─────────────────────────────┘
+```
+
+### Architecture Features:
+1. **Sliding-Window Dialogue Buffer (`ShortTermMemoryManager`)**:
+   - Caps conversational context to the last $K$ turns (default 10 turns), preventing context-window degradation and latency inflation.
+   - Preserves core conversational coherence across side questions and qualification steps.
+2. **Distributed Redis Persistence (`RedisSessionStore`)**:
+   - Stores session state JSON under `ashcombe:session:{session_id}` with an automatic 24-hour expiration (`EXPIRE`).
+   - Enables stateless server pods to share and recover visitor conversations seamlessly behind load balancers.
+3. **Graceful Degradation to In-Memory Cache**:
+   - If Redis is offline or not installed, the engine automatically catches connection errors and seamlessly falls back to local in-memory caching with zero downtime or user impact.
 
 ---
 
@@ -222,7 +321,9 @@ ashcombe_rowe_estate_agent/
 │   ├── config.py             # Pydantic Settings and environment configuration
 │   ├── data_store.py         # Relational indexing, fuzzy property lookup, and coverage verification
 │   ├── graph_agent.py        # LangGraph StateGraph compiled workflow with MemorySaver
+│   ├── guardrails.py         # Production Ingress & Egress Guardrails (PII redaction, injection defense, gatekeeping)
 │   ├── llm_factory.py        # Unified LLM provider with automatic Gemini failover circuit
+│   ├── memory.py             # Short-term sliding window memory and distributed Redis session store
 │   ├── models.py             # Pydantic schemas, FlowStep enum, and LeadData models
 │   ├── parsers.py            # Robust regex parsers for budgets (£1.5m, 950k), postcodes, and contacts
 │   ├── rag_engine.py         # Production Chroma + BM25Okapi hybrid RAG engine with observability
@@ -233,8 +334,10 @@ ashcombe_rowe_estate_agent/
 │   ├── conftest.py           # Pytest fixtures and mock setups
 │   ├── test_data_store.py    # Unit tests for property lookups and coverage filters
 │   ├── test_flowchart_paths.py # End-to-end tests for all flowchart lanes
+│   ├── test_guardrails.py     # Production input & output guardrails tests (PII masking, secrets, gatekeeping)
 │   ├── test_langgraph.py     # StateGraph compilation, memory checkpoints, and node execution
 │   ├── test_llm_fallback.py  # Unit tests verifying automatic failover from Ollama to Gemini
+│   ├── test_memory_and_redis.py # Sliding-window buffer, Redis TTL persistence, and in-memory fallback
 │   ├── test_parsers.py       # Regex parser stress tests across colloquial inputs
 │   ├── test_qualification_rules.py # Mathematical business rules tests (M1, M2, M3)
 │   └── test_side_questions.py# Mid-flow FAQ interruption and resumption tests

@@ -20,9 +20,9 @@ class Settings(BaseSettings):
     HEAD_OFFICE_EMAIL: str = "hello@ashcombe-rowe.example"
     HEAD_OFFICE_ADDRESS: str = "22 Halden Mews, Mayfair, London W1K 2PX"
     
-    # LLM Configuration
-    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "ollama")  # ollama | groq | gemini | openai
-    LLM_MODEL: str = os.getenv("LLM_MODEL", "qwen2.5:3b")
+    # LLM Configuration (Primary: Google Gemini Cloud, Fallback: Local Qwen via Ollama)
+    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "gemini")  # gemini | ollama | groq | openai
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini-3.5-flash-lite")
     LLM_API_KEY: str = (
         os.getenv("LLM_API_KEY")
         or os.getenv("GEMINI_API_KEY")
@@ -31,13 +31,13 @@ class Settings(BaseSettings):
         or os.getenv("GROQ_API_KEY")
         or ""
     )
-    LLM_BASE_URL: str = os.getenv("LLM_BASE_URL", "http://localhost:11434")
+    LLM_BASE_URL: str = os.getenv("LLM_BASE_URL", "")
     
-    # Fallback LLM Settings (Automatic Failover: Primary Local Qwen -> Secondary Cloud Gemini)
-    FALLBACK_LLM_PROVIDER: str = os.getenv("FALLBACK_LLM_PROVIDER", "gemini")  # gemini | groq | openai | none
-    FALLBACK_LLM_MODEL: str = os.getenv("FALLBACK_LLM_MODEL", "gemini-2.0-flash")
-    FALLBACK_LLM_API_KEY: str = os.getenv("FALLBACK_LLM_API_KEY", os.getenv("GEMINI_API_KEY", ""))
-    FALLBACK_LLM_BASE_URL: str = os.getenv("FALLBACK_LLM_BASE_URL", "")
+    # Fallback LLM Settings (Automatic Failover: Primary Cloud Gemini -> Secondary Local Qwen)
+    FALLBACK_LLM_PROVIDER: str = os.getenv("FALLBACK_LLM_PROVIDER", "ollama")  # ollama | gemini | groq | openai | none
+    FALLBACK_LLM_MODEL: str = os.getenv("FALLBACK_LLM_MODEL", "qwen2.5:3b")
+    FALLBACK_LLM_API_KEY: str = os.getenv("FALLBACK_LLM_API_KEY", "ollama")
+    FALLBACK_LLM_BASE_URL: str = os.getenv("FALLBACK_LLM_BASE_URL", "http://localhost:11434")
     LLM_ENRICHMENT_ENABLED: bool = os.getenv("LLM_ENRICHMENT_ENABLED", "true").lower() in ("true", "1", "yes")
     
     # Embedding & Vector Store Configuration
@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
     EMBEDDING_API_KEY: str = os.getenv("EMBEDDING_API_KEY", "")
     RAG_VECTOR_STORE: str = os.getenv("RAG_VECTOR_STORE", "chroma")  # chroma | in_memory
+    
+    # Short-Term Memory & Local In-Memory Session Store (Default: Local, Last 5 Turns, Zero External Daemon)
+    REDIS_ENABLED: bool = os.getenv("REDIS_ENABLED", "false").lower() in ("true", "1", "yes")
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    REDIS_TTL_SECONDS: int = int(os.getenv("REDIS_TTL_SECONDS", "86400"))  # 24 hour TTL
+    SHORT_TERM_MEMORY_WINDOW: int = int(os.getenv("SHORT_TERM_MEMORY_WINDOW", "5"))  # strict 5-turn sliding window
     
     # Data Paths
     DATA_DIR: Path = PROJECT_ROOT / "data"
