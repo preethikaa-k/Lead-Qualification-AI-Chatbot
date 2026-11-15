@@ -11,11 +11,12 @@ from src.config import settings
 
 def run_cli():
     session_id = str(uuid.uuid4())
-    print("\n" + "=" * 70)
+    print("\n" + "=" * 75)
     print(" ASHCOMBE & ROWE ESTATES - LEAD QUALIFICATION CHATBOT (CLI)")
-    print(f" LLM Provider: {settings.LLM_PROVIDER.upper()} | Model: {settings.LLM_MODEL}")
+    print(f" Primary LLM : {settings.LLM_PROVIDER.upper()} ({settings.LLM_MODEL})")
+    print(f" Fallback LLM: {settings.FALLBACK_LLM_PROVIDER.upper()} ({settings.FALLBACK_LLM_MODEL}) [Failover Ready]")
     print(" Type 'quit' or 'exit' to end the chat.")
-    print("=" * 70 + "\n")
+    print("=" * 75 + "\n")
 
     # Initial start greeting
     initial_greeting = agent.chat(session_id, "Hello")

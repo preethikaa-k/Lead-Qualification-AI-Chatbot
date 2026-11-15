@@ -1,0 +1,133 @@
+{
+  "benchmark_name": "Ashcombe & Rowe Estates FAQ RAG Evaluation",
+  "total_test_cases": 12,
+  "metrics": {
+    "context_precision_hit_rate": 1.0,
+    "faithfulness_rate": 1.0,
+    "zero_hallucination_out_of_domain_rate": 1.0,
+    "overall_accuracy": 1.0,
+    "ragas_library_scores": {}
+  },
+  "results": [
+    {
+      "test_id": "TC-01",
+      "question": "Can I pop into the Chelsea branch on a Sunday afternoon?",
+      "category": "hours",
+      "expected_id": "FAQ-023/FAQ-029",
+      "retrieved_id": "FAQ-029",
+      "hit": true,
+      "factual_faithfulness": 1.0,
+      "retrieved_answer": "Only our Chelsea branch is open on Sundays, from 11:00 am to 3:00 pm. All other branches and the head office are closed on Sundays."
+    },
+    {
+      "test_id": "TC-02",
+      "question": "Are any of your offices open on Sunday other than Chelsea?",
+      "category": "hours",
+      "expected_id": "FAQ-029",
+      "retrieved_id": "FAQ-029",
+      "hit": true,
+      "factual_faithfulness": 1.0,
+      "retrieved_answer": "Only our Chelsea branch is open on Sundays, from 11:00 am to 3:00 pm. All other branches and the head office are closed on Sundays."
+    },
+    {
+      "test_id": "TC-03",
+      "question": "What commission fee do you charge to sell a residential property?",
+      "category": "selling",
+      "expected_id": "FAQ-040",
+      "retrieved_id": "FAQ-040",
+      "hit": true,
+      "factual_faithfulness": 1.0,
+      "retrieved_answer": "Our standard sole-agency fee is 1.5% of the agreed sale price plus VAT. Multi-agency is 2.25% plus VAT. There are no upfront costs; you pay only when your sale completes."
+    },
+    {
+      "test_id": "TC-04",
+      "question": "Where is your head office located in London?",
+      "category": "contact",
+      "expected_id": "FAQ-009/FAQ-004",
+      "retrieved_id": "FAQ-009",
+      "hit": true,
+      "factual_faithfulness": 1.0,
+      "retrieved_answer": "Our head office is at 22 Halden Mews, Mayfair, London W1K 2PX."
+    },
+    {
+      "test_id": "TC-05",
+      "question": "Which local branch handles properties in the Kew area?",
+      "category": "branches",
+      "expected_id": "FAQ-020",
+      "retrieved_id": "FAQ-020",
+      "hit": true,
+      "factual_faithfulness": 1.0,
+      "retrieved_answer": "Kew is covered by our Richmond branch at 9 Hill Street, Richmond TW9 1SX (020 7946 0430)."
+    },
+    {
+      "test_id": "TC-06",
+      "question": "Is a property valuation free of charge?",
+      "category": "selling",
+      "expected_id": "FAQ-039",
+      "retrieved_id": "FAQ-039",
+      "hit": true,
+      "factual_faithfulness": 1.0,
+      "retrieved_answer": "Yes. Our market valuations are free and come with no obligation to instruct us."
+    },
+    {
+      "test_id": "TC-07",
+      "question": "What paperwork and documents do I need to submit an offer?",
+      "category": "buying",
+      "expected_id": "FAQ-036",
+      "retrieved_id": "FAQ-036",
+      "hit": true,
+      "factual_faithfulness": 1.0,
+      "retrieved_answer": "To make an offer you will need photo ID, proof of address and proof of funds (or a mortgage agreement in principle). This is required under UK anti-money laundering regulations."
+    },
+    {
+      "test_id": "TC-08",
+      "question": "Do you handle new-build homes priced under \u00a31 million?",
+      "category": "company",
+      "expected_id": "FAQ-006",
+      "retrieved_id": "FAQ-006",
+      "hit": true,
+      "factual_faithfulness": 1.0,
+      "retrieved_answer": "Our new-build service is for homes priced at \u00a31 million and above. Our resale listings cover a wider range of prices, including some homes under \u00a31 million. For anything else, please call our head office on 020 7946 0100."
+    },
+    {
+      "test_id": "TC-09",
+      "question": "Do you offer lettings or property management services?",
+      "category": "general",
+      "expected_id": "FAQ-044",
+      "retrieved_id": "FAQ-044",
+      "hit": true,
+      "factual_faithfulness": 1.0,
+      "retrieved_answer": "No. We focus on sales only and do not currently offer lettings or property management. For rental enquiries please call our head office on 020 7946 0100 and we can recommend a partner agency."
+    },
+    {
+      "test_id": "TC-10",
+      "question": "Are you registered with any professional real estate bodies?",
+      "category": "company",
+      "expected_id": "FAQ-007",
+      "retrieved_id": "FAQ-007",
+      "hit": true,
+      "factual_faithfulness": 1.0,
+      "retrieved_answer": "Yes. We are members of Propertymark and The Property Ombudsman, and we follow their codes of practice."
+    },
+    {
+      "test_id": "TC-11",
+      "question": "Do you have commercial airplane hangars for sale in Manchester?",
+      "category": "out_of_domain",
+      "expected_id": "DEFLECTION",
+      "retrieved_id": "HEAD_OFFICE_FALLBACK",
+      "hit": true,
+      "factual_faithfulness": 1.0,
+      "retrieved_answer": "I'm sorry, I don't have that information in my records. Please contact our head office on 020 7946 0100."
+    },
+    {
+      "test_id": "TC-12",
+      "question": "Can I get a discount policy on solar panels from David Rowe?",
+      "category": "out_of_domain",
+      "expected_id": "DEFLECTION",
+      "retrieved_id": "HEAD_OFFICE_FALLBACK",
+      "hit": true,
+      "factual_faithfulness": 1.0,
+      "retrieved_answer": "I'm sorry, I don't have that information in my records. Please contact our head office on 020 7946 0100."
+    }
+  ]
+}

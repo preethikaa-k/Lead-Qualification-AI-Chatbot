@@ -122,7 +122,9 @@ def parse_name(text: str) -> Optional[str]:
         name = match.group(1).strip()
         # Clean any trailing punctuation
         name = re.sub(r"[.,!?;:].*$", "", name).strip()
-        if name and not any(w in name.lower() for w in ["looking", "interested", "want", "here", "to"]):
+        stop_words = {"looking", "interested", "want", "here", "to"}
+        name_words = set(re.findall(r"\b\w+\b", name.lower()))
+        if name and not (stop_words & name_words):
             return name.title()
 
     # If it's a short 1-3 word phrase without verbs, assume it's the direct name

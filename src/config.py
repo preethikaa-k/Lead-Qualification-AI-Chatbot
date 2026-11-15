@@ -21,15 +21,23 @@ class Settings(BaseSettings):
     HEAD_OFFICE_ADDRESS: str = "22 Halden Mews, Mayfair, London W1K 2PX"
     
     # LLM Settings (matching assignment spec exactly)
-    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "ollama")  # groq | ollama | gemini | openai
+    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "ollama")  # ollama | groq | gemini | openai
     LLM_MODEL: str = os.getenv("LLM_MODEL", "qwen2.5:3b")
     LLM_API_KEY: str = os.getenv("LLM_API_KEY", "")
     LLM_BASE_URL: str = os.getenv("LLM_BASE_URL", "http://localhost:11434")
+    
+    # Fallback LLM Settings (Automatic Failover: Primary Local Qwen -> Secondary Cloud Gemini)
+    FALLBACK_LLM_PROVIDER: str = os.getenv("FALLBACK_LLM_PROVIDER", "gemini")  # gemini | groq | openai | none
+    FALLBACK_LLM_MODEL: str = os.getenv("FALLBACK_LLM_MODEL", "gemini-2.0-flash")
+    FALLBACK_LLM_API_KEY: str = os.getenv("FALLBACK_LLM_API_KEY", os.getenv("GEMINI_API_KEY", ""))
+    FALLBACK_LLM_BASE_URL: str = os.getenv("FALLBACK_LLM_BASE_URL", "")
+    LLM_ENRICHMENT_ENABLED: bool = os.getenv("LLM_ENRICHMENT_ENABLED", "true").lower() in ("true", "1", "yes")
     
     # Embedding Settings (matching assignment spec exactly)
     EMBEDDING_PROVIDER: str = os.getenv("EMBEDDING_PROVIDER", "local")  # local | gemini | openai
     EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
     EMBEDDING_API_KEY: str = os.getenv("EMBEDDING_API_KEY", "")
+    RAG_VECTOR_STORE: str = os.getenv("RAG_VECTOR_STORE", "in_memory")  # in_memory | chroma | faiss
     
     # Data Paths
     DATA_DIR: Path = PROJECT_ROOT / "data"

@@ -17,7 +17,7 @@ BOT: Which property is it? Please share the property name or address.
 
 VISITOR: Apartment 1, Aldermoor Place
 
-BOT: Great news, Karen, 'Apartment 1, Aldermoor Place' is available! It is a 2-bedroom, 2-bathroom apartment priced at £1,330,000.
+BOT: Great news, 'Apartment 1, Aldermoor Place' is available! It is a 2-bedroom, 2-bathroom apartment priced at £1,330,000.
 
 Can I get your phone number so our team can arrange a viewing?
 

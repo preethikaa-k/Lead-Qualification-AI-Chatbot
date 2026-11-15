@@ -10,9 +10,9 @@ def main():
     parser = argparse.ArgumentParser(description="Ashcombe & Rowe Estates AI Lead Qualification System")
     parser.add_argument(
         "--mode",
-        choices=["cli", "api", "evaluate"],
+        choices=["cli", "api", "evaluate", "ragas"],
         default="cli",
-        help="Run mode: 'cli' (terminal chat), 'api' (FastAPI server), or 'evaluate' (benchmark suite).",
+        help="Run mode: 'cli' (terminal chat), 'api' (FastAPI server), 'evaluate' (benchmark suite), or 'ragas' (FAQ RAG evaluation).",
     )
     parser.add_argument("--port", type=int, default=8000, help="Port for FastAPI server (default: 8000)")
     parser.add_argument("--host", type=str, default="0.0.0.0", help="Host for FastAPI server")
@@ -29,6 +29,9 @@ def main():
     elif args.mode == "evaluate":
         from evaluate import run_evaluations
         run_evaluations()
+    elif args.mode == "ragas":
+        from evaluate_ragas import run_ragas_evaluation
+        run_ragas_evaluation()
 
 
 if __name__ == "__main__":

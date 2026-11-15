@@ -28,6 +28,7 @@ from src.parsers import (
 )
 from src.data_store import data_store
 from src.rag_engine import faq_engine
+from src.routing_utils import is_answering_current_step
 
 logger = logging.getLogger(__name__)
 
@@ -130,8 +131,7 @@ class LeadQualificationStateMachine:
                 return response
 
         # Check for side questions (FAQ / Property inquiry)
-        # Only check if not currently collecting contact details or if it looks like a clear question
-        if "?" in user_text or any(w in user_text.lower() for w in ["hours", "branch", "chelsea", "mayfair", "fee", "commission", "sunday"]):
+        if not is_answering_current_step(state.current_step, user_text):
             side_ans = self.handle_side_question_or_faq(user_text, state)
             if side_ans:
                 state.history.append({"role": "assistant", "content": side_ans})

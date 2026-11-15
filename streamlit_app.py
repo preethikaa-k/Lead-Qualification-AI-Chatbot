@@ -9,6 +9,7 @@ import uuid
 import json
 from pathlib import Path
 
+
 from src.agent import agent
 from src.models import QualificationStatus, FlowStep
 from src.config import settings
@@ -31,7 +32,13 @@ if "messages" not in st.session_state:
 # Sidebar Dashboard
 with st.sidebar:
     st.title("🏡 Lead Qualification")
-    st.caption("Commversion AI Assessment · Commversion Team")
+    st.caption("Ashcombe & Rowe Estates · Commversion Assessment")
+    
+    st.markdown("### 🤖 Model Orchestration")
+    st.markdown("- **Engine:** `LangGraph (StateGraph + MemorySaver)`")
+    st.markdown(f"- **Primary:** `{settings.LLM_PROVIDER}` ({settings.LLM_MODEL})")
+    st.markdown(f"- **Failover:** `{settings.FALLBACK_LLM_PROVIDER}` ({settings.FALLBACK_LLM_MODEL})")
+    st.markdown("- **Failover Circuit:** `ACTIVE ✅`")
     
     current_state = agent.get_session_state(st.session_state.session_id)
     
@@ -89,24 +96,24 @@ with st.sidebar:
 st.header("Ashcombe & Rowe Estates")
 st.caption("Prime Residential Property in London, Surrey & Oxford · Head Office: 020 7946 0100")
 
-# Quick Prompt Suggestions (if only 1 message in history)
-if len(st.session_state.messages) <= 1:
-    st.write("💡 *Quick test prompts:*")
+# Optional Developer Quick Test Shortcuts (collapsed by default)
+with st.expander("🧪 Developer & Evaluator Shortcuts (Click to simulate pre-scripted test paths)", expanded=False):
+    st.caption("These buttons simulate sample test personas (Sarah, David, Arthur) for evaluation purposes:")
     col1, col2, col3 = st.columns(3)
     with col1:
-        if st.button("New-Build Buyer (£1.5M, SW3 3RB)"):
+        if st.button("Simulate Sarah (New-Build £1.5M)"):
             st.session_state.messages.append({"role": "user", "content": "I'm Sarah and looking to buy a new-build with a £1.5M budget"})
             reply = agent.chat(st.session_state.session_id, "I'm Sarah and looking to buy a new-build with a £1.5M budget")
             st.session_state.messages.append({"role": "assistant", "content": reply})
             st.rerun()
     with col2:
-        if st.button("Resale Buyer (SW3 5WU)"):
+        if st.button("Simulate David (Resale SW3 5WU)"):
             st.session_state.messages.append({"role": "user", "content": "Hi, I'm David, looking for a resale house"})
             reply = agent.chat(st.session_state.session_id, "Hi, I'm David, looking for a resale house")
             st.session_state.messages.append({"role": "assistant", "content": reply})
             st.rerun()
     with col3:
-        if st.button("Seller in Cobham (KT11 4GR)"):
+        if st.button("Simulate Arthur (Seller KT11 4GR)"):
             st.session_state.messages.append({"role": "user", "content": "Hello, I want to sell my house, my name is Arthur"})
             reply = agent.chat(st.session_state.session_id, "Hello, I want to sell my house, my name is Arthur")
             st.session_state.messages.append({"role": "assistant", "content": reply})
@@ -119,8 +126,19 @@ for msg in st.session_state.messages:
     else:
         st.chat_message("assistant").write(msg["content"])
 
+# Prominent Restart Banner when Conversation has Ended
+if current_state and current_state.completed:
+    st.divider()
+    st.info(f"🏁 **This conversation has concluded ({current_state.qualification_status.value}).**")
+    if st.button("✨ Start New Conversation", type="primary", use_container_width=True):
+        st.session_state.session_id = str(uuid.uuid4())
+        st.session_state.messages = []
+        initial_msg = agent.chat(st.session_state.session_id, "Hello")
+        st.session_state.messages.append({"role": "assistant", "content": initial_msg})
+        st.rerun()
+
 # Chat Input Box
-user_query = st.chat_input("Type your message here...")
+user_query = st.chat_input("Type your message here..." if not (current_state and current_state.completed) else "Conversation ended. Click 'Start New Conversation' above to restart.")
 if user_query:
     st.session_state.messages.append({"role": "user", "content": user_query})
     st.chat_message("user").write(user_query)

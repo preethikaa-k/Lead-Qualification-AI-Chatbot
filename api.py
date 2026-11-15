@@ -35,9 +35,12 @@ def health_check() -> Dict[str, Any]:
         "status": "healthy",
         "llm_provider": settings.LLM_PROVIDER,
         "llm_model": settings.LLM_MODEL,
+        "fallback_llm_provider": settings.FALLBACK_LLM_PROVIDER,
+        "fallback_llm_model": settings.FALLBACK_LLM_MODEL,
         "properties_count": len(data_store.properties),
         "seller_coverage_count": len(data_store.seller_postcodes),
         "faq_count": len(faq_engine.faqs),
+        "diagnostics": agent.get_system_diagnostics(),
     }
 
 
