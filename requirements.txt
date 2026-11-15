@@ -28,4 +28,5 @@ langgraph>=0.2.0
 # Testing & Quality Assurance
 pytest>=8.0.0
 requests>=2.31.0
+ragas>=0.1.0
  

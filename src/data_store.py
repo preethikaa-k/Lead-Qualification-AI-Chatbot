@@ -136,25 +136,69 @@ class EstateDataStore:
             return []
 
         q_clean = query.strip().lower()
+        # Clean query
+        # Remove common conversational prefixes/suffixes if present
+        clean_prefix_q = re.sub(
+            r"^(?:can you tell me about|tell me about|what about|how much is|is|what is the price of|looking for|interested in|i am interested in|the property is)\s+",
+            "",
+            q_clean,
+        ).rstrip("?.,!")
+
+        target_queries = [q_clean]
+        if clean_prefix_q and clean_prefix_q != q_clean:
+            target_queries.insert(0, clean_prefix_q)
+
         exact_matches = []
         fuzzy_matches = []
 
+        # 1. Check exact bidirectional containment:
+        # User query contains property name/address OR property name/address contains user query
+        scored_matches = []
         for p in self.properties:
             p_name_lower = p.property_name.lower()
             p_addr_lower = p.address.lower()
 
-            # Exact or substring match in name or address
-            if q_clean in p_name_lower or q_clean in p_addr_lower:
-                exact_matches.append(p)
-                continue
+            for t_q in target_queries:
+                if p_name_lower == t_q or p_addr_lower == t_q:
+                    scored_matches.append((1000 + len(p_name_lower), p))
+                    break
+                elif p_name_lower in t_q or p_addr_lower in t_q:
+                    # Longer property names preferred over shorter substring matches
+                    scored_matches.append((500 + len(p_name_lower), p))
+                    break
+                elif t_q in p_name_lower or t_q in p_addr_lower:
+                    scored_matches.append((200 + len(t_q), p))
+                    break
 
-            # Fuzzy match on property name
-            ratio = SequenceMatcher(None, q_clean, p_name_lower).ratio()
+        if scored_matches:
+            # Sort by match score descending
+            scored_matches.sort(key=lambda x: x[0], reverse=True)
+            top_score = scored_matches[0][0]
+            # If top score is >= 500 (full property name was found in query or exact match)
+            # Only keep top-tier matches
+            if top_score >= 500:
+                filtered = [m[1] for m in scored_matches if m[0] == top_score or m[0] >= 500]
+            else:
+                filtered = [m[1] for m in scored_matches]
+
+            # Deduplicate by property_id while preserving order
+            seen = set()
+            deduped = []
+            for prop in filtered:
+                if prop.property_id not in seen:
+                    seen.add(prop.property_id)
+                    deduped.append(prop)
+            return deduped[:5]
+
+        # 2. Fuzzy match on property name
+        for p in self.properties:
+            p_name_lower = p.property_name.lower()
+            ratio = max(
+                SequenceMatcher(None, t_q, p_name_lower).ratio()
+                for t_q in target_queries
+            )
             if ratio >= 0.70:
                 fuzzy_matches.append((ratio, p))
-
-        if exact_matches:
-            return exact_matches
 
         # Sort fuzzy matches by similarity descending
         fuzzy_matches.sort(key=lambda x: x[0], reverse=True)

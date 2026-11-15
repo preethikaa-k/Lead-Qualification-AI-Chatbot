@@ -23,7 +23,14 @@ class Settings(BaseSettings):
     # LLM Settings (matching assignment spec exactly)
     LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "ollama")  # ollama | groq | gemini | openai
     LLM_MODEL: str = os.getenv("LLM_MODEL", "qwen2.5:3b")
-    LLM_API_KEY: str = os.getenv("LLM_API_KEY", "")
+    LLM_API_KEY: str = (
+        os.getenv("LLM_API_KEY")
+        or os.getenv("GEMINI_API_KEY")
+        or os.getenv("GOOGLE_API_KEY")
+        or os.getenv("OPENAI_API_KEY")
+        or os.getenv("GROQ_API_KEY")
+        or ""
+    )
     LLM_BASE_URL: str = os.getenv("LLM_BASE_URL", "http://localhost:11434")
     
     # Fallback LLM Settings (Automatic Failover: Primary Local Qwen -> Secondary Cloud Gemini)

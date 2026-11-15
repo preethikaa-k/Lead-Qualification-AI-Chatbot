@@ -162,11 +162,40 @@ def detect_mind_change(text: str) -> Optional[str]:
     """
     Detects if the visitor is changing their mind mid-flow.
     Returns 'buy', 'sell', or None.
+    Handles phrases like:
+      - 'Actually, I want to sell instead'
+      - 'I changed my mind, I want to buy'
+      - 'I'd rather sell my house'
+      - 'Switch to selling'
+      - 'I want to sell my property now'
     """
     clean = text.lower()
-    if "actually" in clean or "change my mind" in clean or "instead" in clean or "rather" in clean:
+    
+    # Explicit mind-change markers or verbs
+    sell_patterns = [
+        r"\b(?:actually|change(?:d)? my mind|instead|rather|switch to|prefer to)\b.*\b(?:sell|selling)\b",
+        r"\b(?:want to|like to|decided to|switch to)\s+(?:sell|selling)\b",
+        r"\bsell my (?:home|house|property|flat)\b",
+    ]
+    buy_patterns = [
+        r"\b(?:actually|change(?:d)? my mind|instead|rather|switch to|prefer to)\b.*\b(?:buy|buying|purchase)\b",
+        r"\b(?:want to|like to|decided to|switch to)\s+(?:buy|buying|purchase)\b",
+        r"\bbuy a (?:home|house|property|flat)\b",
+    ]
+
+    for pat in sell_patterns:
+        if re.search(pat, clean):
+            return "sell"
+
+    for pat in buy_patterns:
+        if re.search(pat, clean):
+            return "buy"
+
+    # Fallback to keyword containment
+    if any(k in clean for k in ("actually", "change my mind", "instead", "rather")):
         if "sell" in clean:
             return "sell"
-        if "buy" in clean:
+        if "buy" in clean or "purchas" in clean:
             return "buy"
+
     return None
