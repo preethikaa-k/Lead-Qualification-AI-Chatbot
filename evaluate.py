@@ -260,24 +260,27 @@ def run_evaluations() -> Dict[str, Any]:
         # Save individual transcript (JSON and TXT)
         safe_name = b.name.lower().replace(" ", "_").replace("-", "_").replace("(", "").replace(")", "").replace("<", "lt")
         transcript_file = transcripts_dir / f"transcript_{safe_name}.json"
-        with open(transcript_file, "w", encoding="utf-8") as f:
-            json.dump({
-                "benchmark_name": b.name,
-                "lane": b.lane,
-                "passed": test_passed,
-                "lead_data": state.lead.model_dump(),
-                "history": state.history,
-            }, f, indent=2)
-
         txt_file = transcripts_dir / f"transcript_{safe_name}.txt"
-        with open(txt_file, "w", encoding="utf-8") as f:
-            f.write(f"=== {b.name} ===\n")
-            f.write(f"Lane: {b.lane} | Result: {'PASS' if test_passed else 'FAIL'}\n")
-            f.write(f"Final Qualification Status: {state.qualification_status.value}\n")
-            f.write("-" * 50 + "\n\n")
-            for msg in state.history:
-                role = "VISITOR" if msg["role"] == "user" else "BOT"
-                f.write(f"{role}: {msg['content']}\n\n")
+        try:
+            with open(transcript_file, "w", encoding="utf-8") as f:
+                json.dump({
+                    "benchmark_name": b.name,
+                    "lane": b.lane,
+                    "passed": test_passed,
+                    "lead_data": state.lead.model_dump(),
+                    "history": state.history,
+                }, f, indent=2)
+
+            with open(txt_file, "w", encoding="utf-8") as f:
+                f.write(f"=== {b.name} ===\n")
+                f.write(f"Lane: {b.lane} | Result: {'PASS' if test_passed else 'FAIL'}\n")
+                f.write(f"Final Qualification Status: {state.qualification_status.value}\n")
+                f.write("-" * 50 + "\n\n")
+                for msg in state.history:
+                    role = "VISITOR" if msg["role"] == "user" else "BOT"
+                    f.write(f"{role}: {msg['content']}\n\n")
+        except OSError as e:
+            print(f"       [Notice: Could not write transcript file to disk ({e}) - continuing benchmark]")
 
     pass_rate = (passed_count / total_count) * 100
     print("=" * 80)

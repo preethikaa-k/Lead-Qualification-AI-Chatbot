@@ -262,6 +262,8 @@ class FAQRagEngine:
                     "FAQ-029": [
                         "Are you open on Sunday? Are any branches open on Sundays?",
                         "Can I visit an office on the weekend on Sunday?",
+                        "Are any of your offices open on Sunday other than Chelsea?",
+                        "Are any other branches open on Sundays?",
                     ],
                     "FAQ-031": [
                         "Can I book a house tour on the weekend?",

@@ -303,28 +303,31 @@ def run_ragas_evaluation() -> Dict[str, Any]:
     }
 
     json_path = transcripts_dir / "ragas_evaluation_report.json"
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(report_data, f, indent=2)
-
-    # Export Report to Markdown
     md_path = transcripts_dir / "ragas_evaluation_report.md"
-    with open(md_path, "w", encoding="utf-8") as f:
-        f.write("# Ashcombe & Rowe Estates — Ragas FAQ Evaluation Report\n\n")
-        f.write(f"- **Total Test Cases**: {len(GOLDEN_FAQ_EVAL_DATASET)}\n")
-        f.write(f"- **Context Precision (Hit@1)**: {hit_rate * 100:.1f}%\n")
-        f.write(f"- **Faithfulness (Factual Consistency)**: {faithfulness_rate * 100:.1f}%\n")
-        f.write(f"- **Zero-Hallucination Guardrail Rate**: {zero_hallucination_rate * 100:.1f}%\n")
-        f.write(f"- **Overall Pipeline Accuracy**: {overall_accuracy * 100:.1f}%\n\n")
-        f.write("## Test Case Breakdown\n\n")
-        f.write("| ID | Category | Question | Expected ID | Retrieved ID | Hit | Faithfulness |\n")
-        f.write("| :--- | :--- | :--- | :--- | :--- | :---: | :---: |\n")
-        for r in results_table:
-            status = "✅" if r["hit"] else "❌"
-            f.write(f"| {r['test_id']} | {r['category']} | {r['question']} | {r['expected_id']} | {r['retrieved_id']} | {status} | {r['factual_faithfulness']} |\n")
+    try:
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(report_data, f, indent=2)
 
-    print(f"✅ Ragas evaluation report exported to:")
-    print(f"   • {json_path}")
-    print(f"   • {md_path}\n")
+        # Export Report to Markdown
+        with open(md_path, "w", encoding="utf-8") as f:
+            f.write("# Ashcombe & Rowe Estates — Ragas FAQ Evaluation Report\n\n")
+            f.write(f"- **Total Test Cases**: {len(GOLDEN_FAQ_EVAL_DATASET)}\n")
+            f.write(f"- **Context Precision (Hit@1)**: {hit_rate * 100:.1f}%\n")
+            f.write(f"- **Faithfulness (Factual Consistency)**: {faithfulness_rate * 100:.1f}%\n")
+            f.write(f"- **Zero-Hallucination Guardrail Rate**: {zero_hallucination_rate * 100:.1f}%\n")
+            f.write(f"- **Overall Pipeline Accuracy**: {overall_accuracy * 100:.1f}%\n\n")
+            f.write("## Test Case Breakdown\n\n")
+            f.write("| ID | Category | Question | Expected ID | Retrieved ID | Hit | Faithfulness |\n")
+            f.write("| :--- | :--- | :--- | :--- | :--- | :---: | :---: |\n")
+            for r in results_table:
+                status = "✅" if r["hit"] else "❌"
+                f.write(f"| {r['test_id']} | {r['category']} | {r['question']} | {r['expected_id']} | {r['retrieved_id']} | {status} | {r['factual_faithfulness']} |\n")
+
+        print(f"✅ Ragas evaluation report exported to:")
+        print(f"   • {json_path}")
+        print(f"   • {md_path}\n")
+    except OSError as e:
+        print(f"[Notice: Could not write RAGAS report files to disk ({e}) - display summary above]\n")
 
     return report_data
 
