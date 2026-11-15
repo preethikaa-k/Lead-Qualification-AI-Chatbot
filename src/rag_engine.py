@@ -99,22 +99,101 @@ class FAQRagEngine:
                 texts.append(f"{item.question} [Category: {item.category}] {item.answer}")
                 metadatas.append(meta)
 
-                # 3. Synonym expansions for natural language variations
-                if item.faq_id == "FAQ-044":  # Lettings / rentals
-                    texts.append("Can I rent a flat or house? Do you offer lettings, rentals, or tenant services?")
-                    metadatas.append(meta)
-                elif item.faq_id == "FAQ-009":  # Head office address
-                    texts.append("Where is your office located? What is your head office address in London?")
-                    metadatas.append(meta)
-                elif item.faq_id == "FAQ-040":  # Selling fees
-                    texts.append("What are your fees? How much commission do you charge to sell a home?")
-                    metadatas.append(meta)
-                elif item.faq_id == "FAQ-029":  # Sunday hours
-                    texts.append("Are you open on Sunday? Are any branches open on Sundays?")
-                    metadatas.append(meta)
-                elif item.faq_id == "FAQ-039":  # Free valuation
-                    texts.append("Is a property valuation free? How much does a valuation cost?")
-                    metadatas.append(meta)
+                # 3. Comprehensive synonym expansions for natural language variations
+                faq_expansions = {
+                    "FAQ-001": [
+                        "Tell me about your agency and properties.",
+                        "What price range and property types do you specialise in?",
+                    ],
+                    "FAQ-002": [
+                        "Who are you guys? Tell me about your background and history.",
+                    ],
+                    "FAQ-003": [
+                        "Who started this real estate business? Who founded Ashcombe & Rowe?",
+                        "Who are the founders Helen Ashcombe and David Rowe?",
+                    ],
+                    "FAQ-007": [
+                        "Are your negotiators certified or accredited by regulatory agencies?",
+                        "Are you registered with any professional bodies or industry regulators?",
+                        "Do you follow The Property Ombudsman and Propertymark code of conduct?",
+                    ],
+                    "FAQ-009": [
+                        "Where is your office located? What is your head office address in London?",
+                        "Where can I find your central Mayfair headquarters?",
+                    ],
+                    "FAQ-029": [
+                        "Are you open on Sunday? Are any branches open on Sundays?",
+                        "Can I visit an office on the weekend on Sunday?",
+                    ],
+                    "FAQ-031": [
+                        "Can I book a house tour on the weekend?",
+                        "How do I arrange a viewing or visit a property?",
+                        "How do I see inside one of your houses or apartments?",
+                    ],
+                    "FAQ-032": [
+                        "Do you take any money from people buying a house?",
+                        "Do you charge buyers any fee, commission, or upfront costs?",
+                        "Are there any buyer charges or fees when purchasing a property?",
+                    ],
+                    "FAQ-034": [
+                        "Do I need a mortgage in principle or agreement before viewing?",
+                        "Do I need proof of funds or mortgage approval to look at houses?",
+                    ],
+                    "FAQ-035": [
+                        "What if I need someone to help me get a home loan or mortgage?",
+                        "Can you recommend a mortgage broker or independent financing adviser?",
+                        "I am looking for someone to help me get a mortgage.",
+                    ],
+                    "FAQ-036": [
+                        "What paperwork and ID documents do I need to submit an offer?",
+                        "What documents are required for anti-money laundering checks?",
+                    ],
+                    "FAQ-037": [
+                        "Can I buy a property off-plan before it is constructed?",
+                        "Do you sell off plan new developments with reservations?",
+                    ],
+                    "FAQ-038": [
+                        "How do I sell my home with your agency?",
+                        "What are the steps to list and market my property for sale?",
+                    ],
+                    "FAQ-039": [
+                        "Is a property valuation free? How much does a market valuation cost?",
+                        "Do I have to pay anything to get an estimate of my house value?",
+                    ],
+                    "FAQ-040": [
+                        "What are your fees? How much commission do you charge to sell a home?",
+                        "Do I need to pay anything upfront to list my house with you?",
+                        "What is your sole agency and multi agency selling commission percentage?",
+                    ],
+                    "FAQ-041": [
+                        "How long does it take to sell a property from launch to completion?",
+                        "What is the average timescale and duration to get an offer and complete?",
+                    ],
+                    "FAQ-042": [
+                        "Do I legally need an Energy Performance Certificate (EPC) to sell?",
+                    ],
+                    "FAQ-044": [
+                        "Can I rent a flat or house? Do you offer lettings, rentals, or tenant services?",
+                        "Do you manage rental properties or handle landlord lettings?",
+                    ],
+                    "FAQ-045": [
+                        "Can you advise me on stamp duty tax, SDLT, or legal matters?",
+                        "Do you give tax advice or conveyancing legal advice?",
+                    ],
+                    "FAQ-046": [
+                        "What happens to my personal information? What do you do with my data?",
+                        "How do you comply with UK GDPR and data privacy laws?",
+                    ],
+                    "FAQ-047": [
+                        "Can people from abroad purchase a house through your agency?",
+                        "Do you work with international, overseas, or foreign buyers?",
+                    ],
+                }
+
+                if item.faq_id in faq_expansions:
+                    for exp in faq_expansions[item.faq_id]:
+                        texts.append(exp)
+                        metadatas.append(meta)
 
             self.vector_store.add_texts(texts=texts, metadatas=metadatas)
             logger.info(f"Loaded {len(texts)} FAQ vector representations into InMemoryVectorStore using {settings.EMBEDDING_MODEL}.")
@@ -135,7 +214,7 @@ class FAQRagEngine:
             logger.error(f"TF-IDF initialization failed: {e}")
             self.vectorizer = None
 
-    def search_faq(self, query: str, threshold: float = 0.55) -> Optional[FAQItem]:
+    def search_faq(self, query: str, threshold: float = 0.52) -> Optional[FAQItem]:
         """
         Searches FAQ knowledge base using semantic vector search.
         Returns the best matching FAQItem if similarity >= threshold, else None.
@@ -149,7 +228,7 @@ class FAQRagEngine:
         # 1. Primary: VectorStore Semantic Search
         if self.vector_store is not None:
             try:
-                results = self.vector_store.similarity_search_with_score(clean_query, k=1)
+                results = self.vector_store.similarity_search_with_score(clean_query, k=3)
                 if results:
                     doc, score = results[0]
                     # InMemoryVectorStore returns cosine similarity (1.0 = identical, 0.0 = orthogonal)
