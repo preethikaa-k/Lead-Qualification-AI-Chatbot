@@ -5,11 +5,11 @@ Final Qualification Status: QUALIFIED
 
 VISITOR: Hello, I want to sell my property, my name is Arthur
 
-BOT: Hello Arthur! Welcome to Ashcombe & Rowe Estates. What is your postcode?
+BOT: No problem! Let's help you sell your property. What is your postcode?
 
 VISITOR: KT11 4GR
 
-BOT: Great news, Arthur, we cover your area (KT11 4GR)! Can I get your phone number so our local branch can arrange a valuation?
+BOT: Great news, we cover your area (KT11 4GR)! Can I get your phone number so our local branch can arrange a valuation?
 
 VISITOR: 07555 999888
 

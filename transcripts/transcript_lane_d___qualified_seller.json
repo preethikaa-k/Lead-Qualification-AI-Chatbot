@@ -3,7 +3,7 @@
   "lane": "D",
   "passed": true,
   "lead_data": {
-    "visitor_name": "Arthur",
+    "visitor_name": null,
     "phone": "07555 999888",
     "email": "arthur@example.com",
     "intent": "sell",
@@ -20,7 +20,7 @@
     },
     {
       "role": "assistant",
-      "content": "Hello Arthur! Welcome to Ashcombe & Rowe Estates. What is your postcode?"
+      "content": "No problem! Let's help you sell your property. What is your postcode?"
     },
     {
       "role": "user",
@@ -28,7 +28,7 @@
     },
     {
       "role": "assistant",
-      "content": "Great news, Arthur, we cover your area (KT11 4GR)! Can I get your phone number so our local branch can arrange a valuation?"
+      "content": "Great news, we cover your area (KT11 4GR)! Can I get your phone number so our local branch can arrange a valuation?"
     },
     {
       "role": "user",
