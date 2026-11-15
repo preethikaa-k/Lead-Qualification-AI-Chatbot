@@ -11,7 +11,7 @@
 
 A production-grade agentic lead qualification system built for **Ashcombe & Rowe Estates**, a luxury UK estate agency specialising in prime residential properties (£1M+) across London, Surrey, and Oxford.
 
-Built for the **Commversion AI & Data Team AI Engineer Assignment**.
+Enterprise Agentic AI & RAG Lead Qualification System.
 
 ---
 
@@ -33,7 +33,7 @@ Built for the **Commversion AI & Data Team AI Engineer Assignment**.
    - [Scripted Conversation Benchmarks (100% Pass Rate)](#scripted-conversation-benchmarks)
    - [Ragas FAQ Evaluation & Grounding Report (100% Score)](#ragas-faq-evaluation--grounding-report)
 10. [Sample Transcripts & Edge-Case Walkthroughs](#sample-transcripts--edge-case-walkthroughs)
-11. [Production Readiness Assessment](#production-readiness-assessment)
+11. [Production Readiness & Enterprise Scaling](#production-readiness--enterprise-scaling)
     - [What Works in Production Today](#what-works-in-production-today)
     - [Gaps & Enhancements for Enterprise Production at Scale](#gaps--enhancements-for-enterprise-production-at-scale)
     - [Enterprise Production Architecture Roadmap](#enterprise-production-architecture-roadmap)
@@ -431,7 +431,7 @@ Structured transcripts are generated in the `transcripts/` directory for audit a
 
 ---
 
-## Production Readiness Assessment
+## Production Readiness & Enterprise Scaling
 
 ### "Can this code work perfectly in production?"
 

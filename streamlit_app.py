@@ -33,7 +33,7 @@ if "messages" not in st.session_state:
 # Sidebar Dashboard
 with st.sidebar:
     st.title("🏡 Lead Qualification")
-    st.caption("Ashcombe & Rowe Estates · Commversion Assessment")
+    st.caption("Ashcombe & Rowe Estates · Prime Residential Advisory")
     
     st.markdown("### 🤖 Architecture & Telemetry")
     st.markdown("- **Orchestrator:** `LangGraph (StateGraph)`")

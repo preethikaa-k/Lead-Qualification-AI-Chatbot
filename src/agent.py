@@ -48,7 +48,7 @@ class LeadQualificationAgent:
     def _check_prompt_injection(self, text: str) -> bool:
         """
         Detects adversarial attempts to hijack bot instructions or bypass lead qualification.
-        Matches assignment requirement: 'Keep the bot on topic and resistant to attempts to make it ignore its rules.'
+        Enforces strict compliance: 'Keep the bot on topic and resistant to attempts to make it ignore its rules.'
         """
         injection_patterns = [
             r"ignore (?:all )?(?:previous|above) instructions",

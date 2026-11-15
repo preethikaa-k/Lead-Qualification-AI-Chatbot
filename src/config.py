@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     HEAD_OFFICE_EMAIL: str = "hello@ashcombe-rowe.example"
     HEAD_OFFICE_ADDRESS: str = "22 Halden Mews, Mayfair, London W1K 2PX"
     
-    # LLM Settings (matching assignment spec exactly)
+    # LLM Configuration
     LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "ollama")  # ollama | groq | gemini | openai
     LLM_MODEL: str = os.getenv("LLM_MODEL", "qwen2.5:3b")
     LLM_API_KEY: str = (
@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     FALLBACK_LLM_BASE_URL: str = os.getenv("FALLBACK_LLM_BASE_URL", "")
     LLM_ENRICHMENT_ENABLED: bool = os.getenv("LLM_ENRICHMENT_ENABLED", "true").lower() in ("true", "1", "yes")
     
-    # Embedding Settings (matching assignment spec exactly)
+    # Embedding & Vector Store Configuration
     EMBEDDING_PROVIDER: str = os.getenv("EMBEDDING_PROVIDER", "local")  # local | gemini | openai
     EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
     EMBEDDING_API_KEY: str = os.getenv("EMBEDDING_API_KEY", "")
