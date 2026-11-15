@@ -1,18 +1,19 @@
 """
 Streamlit Web Frontend for Ashcombe & Rowe Estates Chatbot.
 Provides an interactive chat interface, live lead status dashboard,
-flow step tracker, and transcript exporter.
+flow step tracker, transcript exporter, and Live Hybrid RAG Observability.
 """
 
 import streamlit as st
 import uuid
 import json
+import pandas as pd
 from pathlib import Path
-
 
 from src.agent import agent
 from src.models import QualificationStatus, FlowStep
 from src.config import settings
+from src.rag_engine import faq_engine
 
 st.set_page_config(
     page_title="Ashcombe & Rowe Estates - AI Assistant",
@@ -34,11 +35,12 @@ with st.sidebar:
     st.title("🏡 Lead Qualification")
     st.caption("Ashcombe & Rowe Estates · Commversion Assessment")
     
-    st.markdown("### 🤖 Model Orchestration")
-    st.markdown("- **Engine:** `LangGraph (StateGraph + MemorySaver)`")
-    st.markdown(f"- **Primary:** `{settings.LLM_PROVIDER}` ({settings.LLM_MODEL})")
-    st.markdown(f"- **Failover:** `{settings.FALLBACK_LLM_PROVIDER}` ({settings.FALLBACK_LLM_MODEL})")
-    st.markdown("- **Failover Circuit:** `ACTIVE ✅`")
+    st.markdown("### 🤖 Architecture & Telemetry")
+    st.markdown("- **Orchestrator:** `LangGraph (StateGraph)`")
+    st.markdown(f"- **Primary LLM:** `{settings.LLM_PROVIDER}` ({settings.LLM_MODEL})")
+    st.markdown(f"- **Failover LLM:** `{settings.FALLBACK_LLM_PROVIDER}` ({settings.FALLBACK_LLM_MODEL})")
+    st.markdown("- **RAG Engine:** `Chroma (Dense) + BM25 (Sparse) Hybrid`")
+    st.markdown("- **Grounding Firewall:** `Strict Threshold 0.60 (Zero Hallucination)`")
     
     current_state = agent.get_session_state(st.session_state.session_id)
     
@@ -74,6 +76,34 @@ with st.sidebar:
             st.subheader(f"🏠 Matches Found ({len(lead.matched_properties)})")
             for prop in lead.matched_properties[:3]:
                 st.markdown(f"- **{prop['property_name']}** (£{prop['price_gbp']:,})")
+
+        st.divider()
+        
+        # ---------------------------------------------------------------------
+        # Live Hybrid RAG & Grounding Observability Section
+        # ---------------------------------------------------------------------
+        with st.expander("📊 Live RAG Observability & Grounding", expanded=False):
+            rag_metrics = faq_engine.get_observability_metrics()
+            col_m1, col_m2 = st.columns(2)
+            with col_m1:
+                st.metric("Total Queries", rag_metrics.get("total_queries", 0))
+                st.metric("Grounded Hits", rag_metrics.get("grounded_hits", 0))
+            with col_m2:
+                st.metric("Avg Latency", f"{rag_metrics.get('avg_latency_ms', 0)} ms")
+                st.metric("Fidelity Rate", rag_metrics.get("grounding_fidelity_rate", "100%"))
+
+            st.caption(f"Vector Store: **{rag_metrics.get('vector_store_primary', 'Chroma')}** | Sparse: **BM25Okapi**")
+
+            recent_logs = faq_engine.get_observability_audit_log(limit=5)
+            if recent_logs:
+                st.markdown("**Recent Query Grounding Audit:**")
+                for item in recent_logs:
+                    badge = "🟢 Grounded" if item.get("is_grounded") else "🔴 Deflected"
+                    st.markdown(
+                        f"- `{item['timestamp'][11:19]}` **{badge}** (Hybrid: `{item['hybrid_score']}`)\n"
+                        f"  *Query:* \"{item['query'][:35]}...\"\n"
+                        f"  *Source:* {item['selected_faq_id'] or 'None (Out of Domain)'}"
+                    )
 
         st.divider()
         # Export Transcript
