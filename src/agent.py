@@ -31,6 +31,10 @@ logger = logging.getLogger(__name__)
 
 
 class LeadQualificationAgent:
+    input_guardrail: InputGuardrail = input_guardrail
+    output_guardrail: OutputGuardrail = output_guardrail
+    memory: ShortTermSessionManager = short_term_memory
+
     def __init__(self, use_langgraph: bool = True):
         self.use_langgraph = use_langgraph
         self.graph = lead_qualification_graph
@@ -38,9 +42,9 @@ class LeadQualificationAgent:
         self.llm = llm_client
         self.tools = ALL_ESTATE_TOOLS
         self.sessions: Dict[str, ConversationState] = {}
-        self.input_guardrail: InputGuardrail = input_guardrail
-        self.output_guardrail: OutputGuardrail = output_guardrail
-        self.memory: ShortTermSessionManager = short_term_memory
+        self.input_guardrail = input_guardrail
+        self.output_guardrail = output_guardrail
+        self.memory = short_term_memory
 
     def get_or_create_session(self, session_id: Optional[str] = None) -> ConversationState:
         if not session_id:

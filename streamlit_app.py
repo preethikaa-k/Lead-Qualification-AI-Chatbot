@@ -18,6 +18,7 @@ from src.agent import agent
 from src.models import QualificationStatus, FlowStep
 from src.config import settings
 from src.rag_engine import faq_engine
+from src.memory import short_term_memory
 
 # Page Configuration
 st.set_page_config(
@@ -253,14 +254,14 @@ with st.sidebar:
 
         st.divider()
         # Telemetry & Observability Accordions
-        mem_status = agent.memory.get_status()
+        mem_status = short_term_memory.get_status()
         with st.expander("🧠 Short-Term Memory (Local 5-Turn)", expanded=False):
             st.markdown(f"""
             - **Storage Mode:** `Local In-Memory Buffer`
             - **Sliding Window:** `Last {mem_status.get('window_size', 5)} Turns (Auto-Pruned)`
             - **Persistence Engine:** `Zero External Workflow (Local Memory)`
             """)
-            recent_turns = agent.memory.get_sliding_window(st.session_state.session_id, limit=5)
+            recent_turns = short_term_memory.get_sliding_window(st.session_state.session_id, limit=5)
             if recent_turns:
                 st.caption("Active In-Memory Dialogue Window:")
                 for t in recent_turns:
@@ -314,7 +315,7 @@ with st.sidebar:
         if st.button("🔄 Reset Conversation", use_container_width=True):
             st.session_state.session_id = str(uuid.uuid4())
             st.session_state.messages = []
-            agent.memory.clear(st.session_state.session_id)
+            short_term_memory.delete_session(st.session_state.session_id)
             initial_msg = agent.chat(st.session_state.session_id, "Hello")
             st.session_state.messages.append({"role": "assistant", "content": initial_msg})
             st.rerun()
@@ -448,7 +449,7 @@ if is_concluded:
     if st.button("🌟 Start New Consultation", type="primary", use_container_width=True):
         st.session_state.session_id = str(uuid.uuid4())
         st.session_state.messages = []
-        agent.memory.clear(st.session_state.session_id)
+        short_term_memory.delete_session(st.session_state.session_id)
         with st.spinner("Initializing concierge session..."):
             initial_msg = agent.chat(st.session_state.session_id, "Hello")
         st.session_state.messages.append({"role": "assistant", "content": initial_msg})
