@@ -194,45 +194,46 @@ class FAQRagEngine:
                         texts.append(exp)
                         metadatas.append(meta)
 
-            # Initialize chosen VectorStore: FAISS, Chroma, or InMemoryVectorStore
+            # Initialize chosen VectorStore: Chroma (Primary) with automatic fallback to InMemoryVectorStore
             # Fulfills assignment specification: "vector store of your choice (e.g. Chroma, FAISS, Milvus Lite)"
-            store_choice = (settings.RAG_VECTOR_STORE or "in_memory").lower()
+            store_choice = (settings.RAG_VECTOR_STORE or "chroma").lower()
+            self.vector_store_type = "in_memory"
 
-            if store_choice == "faiss":
+            if store_choice == "chroma":
+                try:
+                    try:
+                        from langchain_chroma import Chroma
+                    except ImportError:
+                        from langchain_community.vectorstores import Chroma
+                    
+                    self.vector_store = Chroma.from_texts(
+                        texts=texts,
+                        embedding=embeddings,
+                        metadatas=metadatas,
+                        collection_metadata={"hnsw:space": "cosine"},
+                    )
+                    self.vector_store_type = "chroma"
+                    logger.info(f"Initialized Chroma vector store with {len(texts)} embeddings (hnsw:space=cosine).")
+                except Exception as e:
+                    logger.warning(f"Chroma not available ({e}), falling back to LangChain InMemoryVectorStore.")
+                    self.vector_store = InMemoryVectorStore(embeddings)
+                    self.vector_store.add_texts(texts=texts, metadatas=metadatas)
+                    self.vector_store_type = "in_memory"
+            elif store_choice == "faiss":
                 try:
                     from langchain_community.vectorstores import FAISS
                     self.vector_store = FAISS.from_texts(texts=texts, embedding=embeddings, metadatas=metadatas)
+                    self.vector_store_type = "faiss"
                     logger.info(f"Initialized FAISS vector store with {len(texts)} embeddings.")
                 except Exception as e:
                     logger.info(f"FAISS not available ({e}), falling back to LangChain InMemoryVectorStore.")
                     self.vector_store = InMemoryVectorStore(embeddings)
                     self.vector_store.add_texts(texts=texts, metadatas=metadatas)
-            elif store_choice == "chroma":
-                try:
-                    from langchain_community.vectorstores import Chroma
-                    self.vector_store = Chroma.from_texts(texts=texts, embedding=embeddings, metadatas=metadatas)
-                    logger.info(f"Initialized Chroma vector store with {len(texts)} embeddings.")
-                except Exception as e:
-                    logger.info(f"Chroma not available ({e}), falling back to LangChain InMemoryVectorStore.")
-                    self.vector_store = InMemoryVectorStore(embeddings)
-                    self.vector_store.add_texts(texts=texts, metadatas=metadatas)
-            elif store_choice == "qdrant":
-                try:
-                    from langchain_community.vectorstores import Qdrant
-                    self.vector_store = Qdrant.from_texts(
-                        texts=texts,
-                        embedding=embeddings,
-                        metadatas=metadatas,
-                        location=":memory:",
-                    )
-                    logger.info(f"Initialized Qdrant in-memory vector store with {len(texts)} embeddings.")
-                except Exception as e:
-                    logger.info(f"Qdrant not available ({e}), falling back to LangChain InMemoryVectorStore.")
-                    self.vector_store = InMemoryVectorStore(embeddings)
-                    self.vector_store.add_texts(texts=texts, metadatas=metadatas)
+                    self.vector_store_type = "in_memory"
             else:
                 self.vector_store = InMemoryVectorStore(embeddings)
                 self.vector_store.add_texts(texts=texts, metadatas=metadatas)
+                self.vector_store_type = "in_memory"
                 logger.info(f"Loaded {len(texts)} FAQ vector representations into InMemoryVectorStore using {settings.EMBEDDING_MODEL}.")
 
         except Exception as e:
@@ -267,9 +268,16 @@ class FAQRagEngine:
             try:
                 results = self.vector_store.similarity_search_with_score(clean_query, k=3)
                 if results:
-                    doc, score = results[0]
-                    # InMemoryVectorStore returns cosine similarity (1.0 = identical, 0.0 = orthogonal)
-                    if score >= threshold:
+                    doc, raw_score = results[0]
+                    # Normalize similarity score:
+                    # - Chroma (hnsw:space=cosine) returns cosine distance d in [0, 2], where 0 is identical: similarity = 1 - d
+                    # - InMemoryVectorStore returns cosine similarity in [-1, 1], where 1 is identical
+                    if getattr(self, "vector_store_type", "") == "chroma":
+                        similarity = 1.0 - float(raw_score)
+                    else:
+                        similarity = float(raw_score)
+
+                    if similarity >= threshold:
                         meta = doc.metadata
                         return FAQItem(
                             faq_id=meta.get("faq_id", ""),
