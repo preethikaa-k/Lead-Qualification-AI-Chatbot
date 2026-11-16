@@ -34,4 +34,7 @@ ragas>=0.1.0
 
 # Distributed Session Store & Short-Term Memory
 redis>=5.0.0
+
+# Enterprise Observability & Tracing
+langfuse>=2.0.0
  
