@@ -2,10 +2,18 @@
 Production Input and Output Guardrails for Ashcombe & Rowe Estates.
 Ensures user data protection, PII redaction, prompt injection defense,
 contact privacy gatekeeping, secret leak prevention, and output grounding.
+Implements multi-layer defense-in-depth:
+1. De-obfuscation (Base64, Hex, Leetspeak, Spaced text decoding)
+2. Adversarial & Prompt Injection Pattern Engine (Overriding, Jailbreaks, Delimiters, Leaks, Tampering)
+3. Off-Topic & Unrelated Request Classifier (Flowchart: 'Unrelated request -> politely decline')
+4. PII Redaction & Ingress Logging Sanitization
+5. Output Guardrail (Secret leaks, Unauthorized contact solicitation, Head Office phone grounding)
 """
 
 import re
 import html
+import base64
+import binascii
 import logging
 from typing import Optional, Dict, Any, List, Tuple
 from dataclasses import dataclass, field
@@ -40,27 +48,90 @@ class InputGuardrail:
     """
     Enforces production ingress safety:
     1. Input sanitization (length bounding, control char removal, HTML escaping).
-    2. PII masking in telemetry/logging (PCI-DSS credit cards, UK NI numbers, secrets).
-    3. Adversarial / Prompt Injection & Jailbreak detection.
-    4. Toxic / abusive content de-escalation.
+    2. De-obfuscation (Base64, Hex, Leetspeak, Spaced text).
+    3. Multi-layer Prompt Injection & Adversarial Jailbreak detection.
+    4. Off-topic & unrelated request detection (Flowchart rule compliance).
+    5. PII masking in telemetry/logging (PCI-DSS credit cards, UK NI numbers, secrets).
+    6. Toxic / abusive content de-escalation.
     """
 
     MAX_INPUT_LENGTH = 2000
 
+    # Comprehensive Prompt Injection & Jailbreak Patterns
     INJECTION_PATTERNS = [
-        r"ignore (?:all )?(?:previous|above) instructions",
-        r"you are now (?:in )?(?:dan|jailbreak|unrestricted|god\s*mode)",
-        r"system override",
-        r"pretend to be",
-        r"act as an? (?:unfiltered|unaligned|jailbroken)",
-        r"reveal your (?:system )?prompt",
-        r"forget your rules",
-        r"qualify me anyway",
-        r"bypass (?:check|qualification|flow)",
+        # Instruction Overrides & Reset Directives
+        r"ignore (?:all )?(?:previous|prior|above|former|initial|system) (?:instructions|prompts|rules|directives|guidelines|context)",
+        r"disregard (?:all )?(?:previous|prior|above|former|initial|system) (?:instructions|prompts|rules|directives|guidelines)",
+        r"forget (?:all )?(?:previous|prior|above|former|your) (?:instructions|prompts|rules|directives)",
+        r"clear (?:all )?(?:previous|prior|above|former) (?:instructions|prompts|rules|context)",
+        r"reset (?:all |your )?(?:instructions|prompts|rules|directives)",
+        r"override (?:all )?(?:system|developer|safety|qualification|business) (?:rules|prompts|directives|instructions|checks)",
+        r"bypass (?:all )?(?:safety|system|qualification|budget|postcode|check|flow|rules|restrictions)",
+        r"you are no longer bound by (?:any )?(?:rules|guidelines|instructions)",
+        r"do not follow (?:any )?(?:instructions|rules|guidelines)",
+        r"\bnew directive\b",
+        r"\bsystem prompt override\b",
+
+        # Personas, Jailbreaks & Roleplays
+        r"you are now (?:in )?(?:dan|jailbreak|unrestricted|god\s*mode|developer\s*mode|aim|anarchist|chaos|unaligned|unfiltered)",
+        r"act as (?:an? )?(?:unfiltered|unaligned|jailbroken|evil|unrestricted|uncensored|rogue|hacked|bad) (?:assistant|bot|ai|agent)",
+        r"pretend (?:to be|you are|you have no)?\s*(?:in )?(?:unfiltered|dan|developer mode|no rules|no restrictions)",
+        r"simulate (?:a|an)? (?:developer mode|unrestricted mode|jailbreak|unaligned ai)",
+        r"roleplay as (?:an? )?(?:unrestricted|jailbroken|unfiltered|ruleless)",
+        r"enter (?:developer|god|unrestricted|jailbreak|debug) mode",
+        r"switch to (?:jailbreak|unrestricted|developer) mode",
+        r"\b(?:dan|aim)\s*(?:mode|jailbreak|prompt)\b",
+        r"\bdeveloper\s*mode\b",
+
+        # Qualification & Rule Tampering (Domain-Specific Attacks)
+        r"\b(?:mark|set|make|force|classify|treat)\b.*?\b(?:qualif\w+|approved?)\b",
+        r"\b(?:force|override|bypass)\s+qualification\b",
+        r"\bqualification\s*=\s*\w+",
+        r"qualify (?:me|this lead|us) (?:anyway|regardless|immediately|now|automatically|without checking)",
+        r"skip (?:the )?(?:budget|postcode|qualification|verification) (?:check|step|requirement)",
+        r"approve (?:me|my application|this lead) (?:anyway|regardless|immediately)",
+        r"pretend (?:my budget is|i have) (?:£?\s*\d+|unlimited)",
+        r"ignore (?:the )?(?:budget|postcode|coverage) (?:check|limit|rule)",
+        r"i am (?:the |an? )?(?:ceo|director|owner|admin|developer) (?:of ashcombe|so qualify me)",
+        r"status\s*=\s*['\"]?qualified['\"]?",
+
+        # Delimiter Breakouts & ChatML / Prompt Framing Injection
         r"<\|im_start\|>",
-        r"<<sys>>",
+        r"<\|im_end\|>",
         r"\[inst\]",
-        r"(?:output|print|show)\s+(?:the\s+)?system\s+instructions",
+        r"\[\/inst\]",
+        r"<<sys>>",
+        r"<<\/sys>>",
+        r"<system>",
+        r"<\/system>",
+        r"\[system\]",
+        r"\[\/system\]",
+        r"```(?:system|xml)",
+        r"<prompt>",
+        r"<\/prompt>",
+        r"\{\"role\":\s*\"system\"",
+        r"(?:\n|^)(?:System|Developer|Admin|ROOT|OVERRIDE):\s*",
+
+        # System Prompt Extraction / Leaking
+        r"(?:\b(?:reveal|print|show|output|display|repeat|dump|share)\b.*?\b(?:system |developer |initial |full )?(?:prompt|instructions|rules|directives|context)\b)",
+        r"what (?:are|were) your (?:initial|system|original|developer) (?:instructions|rules|prompts)",
+        r"repeat (?:all )?(?:the text|words) (?:above|from the start)",
+        r"what is your secret (?:prompt|instruction)",
+    ]
+
+    # Off-Topic / Unrelated Requests (Flowchart Rule: "Unrelated request -> politely decline and return to the same step")
+    OFF_TOPIC_PATTERNS = [
+        # Coding & Technical Execution
+        r"\b(?:write|create|generate|debug|run)\b.*?\b(?:python|javascript|typescript|bash|shell|sql|c\+\+|java|html|css|code|script|function|program|algorithm)\b",
+        r"\b(?:sql injection|xss attack|exploit|malware|reverse shell|ddos|port scan|nmap)\b",
+
+        # Creative Writing & General Entertainment
+        r"\b(?:write|compose|generate|tell me)\b.*?\b(?:poem|poetry|song|lyrics|rap|haiku|story|novel|joke|riddle|fairy tale)\b",
+
+        # Homework / General Knowledge / Math / Science
+        r"\b(?:solve|calculate|differentiate|integrate)\b.*?\b(?:equation|integral|derivative|x\^2|math problem)\b",
+        r"\b(?:who was|explain|summarize|tell me about)\b.*?\b(?:quantum physics|photosynthesis|french revolution|black holes|relativity|world war|dna replication)\b",
+        r"\b(?:translate|translation)\b.*?\b(?:to|into)\b.*?\b(?:french|german|spanish|italian|chinese|japanese|russian|arabic|hindi)\b",
     ]
 
     # Sensitive PII patterns to redact from production logs
@@ -87,6 +158,61 @@ class InputGuardrail:
         if len(cleaned) > self.MAX_INPUT_LENGTH:
             cleaned = cleaned[:self.MAX_INPUT_LENGTH]
         return cleaned.strip()
+
+    def deobfuscate_text(self, text: str) -> str:
+        """
+        De-obfuscates text to prevent evasion attacks:
+        1. Decodes hex escape sequences (e.g. \x69\x67\x6e\x6f\x72\x65).
+        2. Normalizes spaced letters (e.g. 'i g n o r e' -> 'ignore').
+        3. Normalizes common leetspeak substitutions.
+        4. Extracts and decodes potential Base64 strings.
+        """
+        if not text:
+            return ""
+
+        processed = text
+
+        # 1. Decode hex escapes like \x69\x67...
+        try:
+            processed = re.sub(
+                r"\\x([0-9a-fA-F]{2})",
+                lambda m: chr(int(m.group(1), 16)),
+                processed,
+            )
+        except Exception:
+            pass
+
+        # 2. Decode embedded Base64 strings (length >= 16)
+        b64_matches = re.finditer(r"[A-Za-z0-9+/]{16,}={0,2}", text)
+        decoded_b64_parts = []
+        for m in b64_matches:
+            cand = m.group(0)
+            try:
+                decoded_bytes = base64.b64decode(cand)
+                decoded_str = decoded_bytes.decode("utf-8", errors="ignore")
+                if len(decoded_str) >= 6 and any(ch.isalpha() for ch in decoded_str):
+                    decoded_b64_parts.append(decoded_str)
+            except Exception:
+                pass
+        if decoded_b64_parts:
+            processed += "\n" + "\n".join(decoded_b64_parts)
+
+        # 3. Collapse single-space separated letters while preserving multi-space word boundaries
+        # e.g. "i g n o r e   a l l" -> "ignore   all"
+        spaced_collapsed = processed
+        prev_collapsed = None
+        while prev_collapsed != spaced_collapsed:
+            prev_collapsed = spaced_collapsed
+            spaced_collapsed = re.sub(r"([A-Za-z]) ([A-Za-z])", r"\1\2", spaced_collapsed)
+        spaced_collapsed = re.sub(r"\s+", " ", spaced_collapsed).strip()
+
+        # 4. Normalize basic leetspeak
+        leetspeak_map = str.maketrans({
+            "0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s"
+        })
+        leeted = processed.translate(leetspeak_map)
+
+        return f"{processed}\n{spaced_collapsed}\n{leeted}"
 
     def mask_pii_for_logging(self, text: str) -> str:
         """
@@ -118,8 +244,20 @@ class InputGuardrail:
         return found
 
     def check_prompt_injection(self, text: str) -> bool:
+        """
+        Detects adversarial prompt injection, jailbreaking, or rule override attempts.
+        Runs pattern checks over original and de-obfuscated input.
+        """
+        deobf = self.deobfuscate_text(text).lower()
+        return any(re.search(pat, deobf) for pat in self.INJECTION_PATTERNS)
+
+    def check_off_topic(self, text: str) -> bool:
+        """
+        Detects unrelated requests (coding, creative writing, homework, math, translation).
+        Flowchart requirement: 'Unrelated request -> politely decline and return to the same step'.
+        """
         lower = text.lower()
-        return any(re.search(pat, lower) for pat in self.INJECTION_PATTERNS)
+        return any(re.search(pat, lower) for pat in self.OFF_TOPIC_PATTERNS)
 
     def check_abusive_content(self, text: str) -> bool:
         return bool(self.ABUSIVE_REGEX.search(text))
@@ -129,7 +267,7 @@ class InputGuardrail:
         masked_log = self.mask_pii_for_logging(sanitized)
         detected_pii = self.scan_pii(sanitized)
 
-        # 1. Prompt Injection Check
+        # 1. Prompt Injection & Adversarial Jailbreak Check
         if self.check_prompt_injection(sanitized):
             prompt_suffix = f"\n\nNow, {current_prompt}" if current_prompt else ""
             deflection = (
@@ -145,7 +283,24 @@ class InputGuardrail:
                 deflection_message=deflection,
             )
 
-        # 2. Abusive Language De-escalation
+        # 2. Off-Topic / Unrelated Request Check (Flowchart Rule Compliance)
+        if self.check_off_topic(sanitized):
+            prompt_suffix = f"\n\nNow, {current_prompt}" if current_prompt else ""
+            deflection = (
+                "Ashcombe & Rowe Estates specializes exclusively in luxury residential property across London, Surrey, and Oxford. "
+                "I am only able to assist with property buying, selling, and agency inquiries."
+                f"{prompt_suffix}"
+            )
+            return InputGuardrailResult(
+                is_safe=False,
+                sanitized_text=sanitized,
+                masked_for_logging=masked_log,
+                detected_pii=detected_pii,
+                violation_type="UNRELATED_REQUEST",
+                deflection_message=deflection,
+            )
+
+        # 3. Abusive Language De-escalation
         if self.check_abusive_content(sanitized):
             prompt_suffix = f"\n\n{current_prompt}" if current_prompt else ""
             deflection = (
@@ -180,6 +335,7 @@ class OutputGuardrail:
     2. Contact Privacy Gatekeeper (never solicits phone/email before qualification).
     3. Ground truth verification (guarantees head office phone is 020 7946 0100).
     4. Cleans formatting artifacts (strips 'Bot:', 'Assistant:', markdown role tags).
+    5. Prompt leakage interceptor (blocks internal prompt echoes).
     """
 
     OFFICE_PHONE = "020 7946 0100"
@@ -188,6 +344,7 @@ class OutputGuardrail:
         r"(?i)\b(?:GEMINI_API_KEY|LLM_API_KEY|DATABASE_URL)\s*=\s*[^\s,;]+",
         r"<\|im_start\|>|<\|im_end\|>",
         r"Traceback \(most recent call last\):",
+        r"(?i)\b(?:CRITICAL SECURITY DIRECTIVE|You are the senior luxury client concierge)\b",
     ]
 
     CONTACT_SOLICITATION_REGEX = re.compile(

@@ -10,7 +10,7 @@
 
 | ID | Category | Question | Expected ID | Retrieved ID | Hit | Faithfulness |
 | :--- | :--- | :--- | :--- | :--- | :---: | :---: |
-| TC-01 | hours | Can I pop into the Chelsea branch on a Sunday afternoon? | FAQ-023/FAQ-029 | FAQ-023 | ✅ | 1.0 |
+| TC-01 | hours | Can I pop into the Chelsea branch on a Sunday afternoon? | FAQ-023/FAQ-029 | FAQ-029 | ✅ | 1.0 |
 | TC-02 | hours | Are any of your offices open on Sunday other than Chelsea? | FAQ-029 | FAQ-029 | ✅ | 1.0 |
 | TC-03 | selling | What commission fee do you charge to sell a residential property? | FAQ-040 | FAQ-040 | ✅ | 1.0 |
 | TC-04 | contact | Where is your head office located in London? | FAQ-009/FAQ-004 | FAQ-009 | ✅ | 1.0 |

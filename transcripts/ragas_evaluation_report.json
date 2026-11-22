@@ -14,10 +14,10 @@
       "question": "Can I pop into the Chelsea branch on a Sunday afternoon?",
       "category": "hours",
       "expected_id": "FAQ-023/FAQ-029",
-      "retrieved_id": "FAQ-023",
+      "retrieved_id": "FAQ-029",
       "hit": true,
       "factual_faithfulness": 1.0,
-      "retrieved_answer": "Chelsea branch: Monday to Friday 9:00 am - 7:00 pm, Saturday 10:00 am - 5:00 pm, Sunday 11:00 am - 3:00 pm."
+      "retrieved_answer": "Only our Chelsea branch is open on Sundays, from 11:00 am to 3:00 pm. All other branches and the head office are closed on Sundays."
     },
     {
       "test_id": "TC-02",

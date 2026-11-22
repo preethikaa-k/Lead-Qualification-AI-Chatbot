@@ -3,6 +3,16 @@ Lane: C | Result: PASS
 Final Qualification Status: UNQUALIFIED_M1
 --------------------------------------------------
 
+VISITOR: Hi, I'm Liam
+
+BOT: Hello Liam! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?
+
+VISITOR: Buy
+
+BOT: Do you have a specific property in mind?
+
+VISITOR: Yes
+
 BOT: Which property is it? Please share the property name or address.
 
 VISITOR: Townhouse 2, Riverside Quarter

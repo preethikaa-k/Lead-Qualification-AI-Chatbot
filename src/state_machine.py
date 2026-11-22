@@ -72,13 +72,27 @@ class LeadQualificationStateMachine:
         return_prompt = self.step_prompt_for(state)
         lower_text = user_text.lower()
 
+        # Dynamic LLM analysis for ANY famous worldwide building, landmark, or out-of-portfolio property
+        if settings.LLM_ENRICHMENT_ENABLED and len(user_text.strip()) > 2:
+            dynamic_steer_reply = llm_client.detect_and_steer_out_of_portfolio_property(
+                user_text,
+                current_step_prompt=return_prompt,
+                visitor_name=state.lead.visitor_name,
+            )
+            if dynamic_steer_reply:
+                return dynamic_steer_reply
+
         # Check out-of-domain unanswerable queries first (e.g. aircraft hangars, solar discounts, Taj Mahal)
         unanswerable_terms = [
-            "taj mahal", "monument", "landmark", "pyramid", "eiffel tower", "white house",
+            "taj mahal", "tajmahal", "monument", "landmark", "pyramid", "eiffel tower", "eiffeltower", "white house", "whitehouse",
             "hangar", "aircraft", "commercial aircraft", "airport", "solar", "warehouse",
-            "factory", "industrial", "manchester", "island", "spaceship"
+            "factory", "industrial", "manchester", "island", "spaceship", "buckingham", "palace"
         ]
-        matched_unanswerable = next((term for term in unanswerable_terms if term in lower_text), None)
+        cleaned_lower = re.sub(r"[^a-z0-9]", "", lower_text)
+        matched_unanswerable = next(
+            (term for term in unanswerable_terms if term in lower_text or term.replace(" ", "") in cleaned_lower),
+            None
+        )
         if matched_unanswerable:
             if settings.LLM_ENRICHMENT_ENABLED:
                 return llm_client.synthesize_unrelated_decline_and_pitch(
@@ -255,8 +269,9 @@ class LeadQualificationStateMachine:
         elif step == FlowStep.ASK_NAME:
             name = parse_name(user_text)
             if not name:
-                # If cannot extract clean name, use first word as friendly default
-                name = user_text.split()[0].title() if user_text else "Guest"
+                response = "Could you please tell me your name so I know who I am speaking with?"
+                state.history.append({"role": "assistant", "content": response})
+                return response
             state.lead.visitor_name = name
 
             # Check if intent was also mentioned (e.g. "I'm David, looking to buy")
@@ -454,14 +469,32 @@ class LeadQualificationStateMachine:
                 response = self._handle_lane_c_match(state, props[0])
             else:
                 # Not found
+                # Check dynamically via LLM if this is a famous building/landmark or out-of-portfolio property:
+                if settings.LLM_ENRICHMENT_ENABLED:
+                    steer_reply = llm_client.detect_and_steer_out_of_portfolio_property(
+                        user_text,
+                        current_step_prompt=self.step_prompt_for(state._replace(current_step=FlowStep.NEW_BUILD_OR_RESALE) if hasattr(state, "_replace") else state),
+                        visitor_name=state.lead.visitor_name,
+                    )
+                    if steer_reply:
+                        state.current_step = FlowStep.NEW_BUILD_OR_RESALE
+                        return steer_reply
+
                 if state.specific_property_retry_count == 0:
                     state.specific_property_retry_count += 1
                     state.current_step = FlowStep.C2_ASK_PROPERTY_ONCE_MORE
                     response = "I couldn't locate that property in our database. Could you please specify the name or address once more?"
                 else:
-                    # Still not found -> continue as general buyer
+                    # Still not found -> continue as general buyer with portfolio pitch
                     state.current_step = FlowStep.NEW_BUILD_OR_RESALE
-                    response = "We could not find that property. Let's find you another home. Are you looking for a new-build or a resale home?"
+                    if settings.LLM_ENRICHMENT_ENABLED:
+                        response = (
+                            "We could not find that property in our records. However, Ashcombe & Rowe Estates represents an exclusive collection "
+                            "of 247 premier luxury residences across prime London (Mayfair, Chelsea, Kensington), Surrey (Cobham), and Oxford (£260,000 to £7,350,000). "
+                            "Let's find you an exceptional home from our portfolio: Are you looking for a new-build or a resale home?"
+                        )
+                    else:
+                        response = "We could not find that property. Let's find you another home. Are you looking for a new-build or a resale home?"
 
         elif step == FlowStep.C5_SIMILAR_BUDGET:
             budget = parse_budget(user_text)

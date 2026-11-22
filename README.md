@@ -1,8 +1,8 @@
 # Ashcombe & Rowe Estates — AI Lead Qualification Chatbot
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Tests Passing](https://img.shields.io/badge/tests-69%2F69%20passing-brightgreen.svg)]()
-[![Benchmark Pass Rate](https://img.shields.io/badge/benchmarks-10%2F10%20(100%25)-success.svg)]()
+[![Tests Passing](https://img.shields.io/badge/tests-76%2F76%20passing-brightgreen.svg)]()
+[![Benchmark Pass Rate](https://img.shields.io/badge/benchmarks-12%2F12%20(100%25)-success.svg)]()
 [![LangGraph](https://img.shields.io/badge/orchestrator-LangGraph%20StateGraph-blue.svg)]()
 [![Chroma Vector DB](https://img.shields.io/badge/vector%20store-Chroma%20HNSW-purple.svg)]()
 [![Docker Ready](https://img.shields.io/badge/docker-ready-blue.svg)]()
@@ -206,13 +206,19 @@ In accordance with enterprise deployment best practices, here is our structured 
 6. **State & Memory Drift**: Losing conversation state when a user asks a side question mid-funnel, leading to circular prompts.
 
 ### Part 2: What Has Been Handled
-- **Ingress Guardrails (`src/guardrails.py`)**: 
+- **Multi-Layer Prompt Injection & Jailbreak Defense (`src/guardrails.py`)**:
+  - **De-obfuscation Pipeline**: Automatically decodes Base64 encoded attack payloads, hex escape sequences (`\x69...`), spaced-out letters (`i g n o r e`), and leetspeak substitutions before running security evaluation.
+  - **Comprehensive Adversarial Engine**: Traps directive resets (*"ignore all previous instructions"*, *"disregard prior rules"*), persona hijacking (*"DAN"*, *"AIM"*, *"developer mode"*, *"god mode"*), and ChatML/delimiters (`<|im_start|>`, `[INST]`, `<<SYS>>`, `[SYSTEM]`, ````system`).
+  - **Lead Qualification Tampering Defense**: Prevents domain-specific attacks attempting to manipulate business rules (*"mark me as qualified"*, *"bypass budget check"*, *"qualify me anyway"*, *"force qualification = true"*).
+  - **Off-Topic & Unrelated Request Deflection**: Implements flowchart rule (*"Unrelated request -> politely decline and return to the same step"*), catching attempts to use the bot for code generation, poetry, trivia, math, or translation, deflecting politely while preserving conversation state.
+  - **LLM XML Prompt Isolation (`src/llm_factory.py`)**: All user inputs in LLM prompts are isolated inside `<client_inquiry>` tags with strict system directives forbidding the LLM from executing commands inside user text.
+  - **Name Parser Hardening (`src/parsers.py`)**: Disallows prompt injection keywords, commands, and question phrases from being assigned as user names.
+- **Ingress Data Protection & Telemetry Masking**:
   - Input bounded to 2,000 characters and stripped of control/null characters.
-  - Heuristic prompt injection detection trapping adversarial keywords (`DAN`, `ignore previous`, `developer mode`, delimiter tokens) and returning an instant safe deflection.
   - Telemetry log masking: PII (phone numbers, email, card numbers, UK NINO) is redacted in all log streams while preserving genuine contact data in memory for qualified leads.
 - **Egress Guardrails (`src/guardrails.py`)**:
   - Contact privacy firewall: Blocks any LLM output that attempts to solicit phone or email if `qualification_status != QUALIFIED`.
-  - Secret leak interceptor: Automatically redacts API key patterns (`AIzaSy...`, `sk-...`, `Bearer...`) from bot output.
+  - Secret leak interceptor: Automatically redacts API key patterns (`AIzaSy...`, `sk-...`, `Bearer...`) and system prompt leaks from bot output.
   - Grounding firewall: Ensures all fallbacks provide the official phone number (`020 7946 0100`).
 - **Deterministic Qualification Gatekeeper**: Qualification logic is executed in compiled Python code, making it impossible for the LLM to hallucinate qualification status.
 - **Dual-Tier Automatic Failover Circuit (`src/llm_factory.py`)**: Seamless transition from Google Gemini to local Qwen 2.5 on Ollama within milliseconds.

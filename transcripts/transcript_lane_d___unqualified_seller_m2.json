@@ -15,6 +15,10 @@
   },
   "history": [
     {
+      "role": "user",
+      "content": "Hello, I am Frank"
+    },
+    {
       "role": "assistant",
       "content": "Hello Frank! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?"
     },

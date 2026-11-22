@@ -3,6 +3,26 @@ Lane: C | Result: PASS
 Final Qualification Status: QUALIFIED
 --------------------------------------------------
 
+VISITOR: Hi, I'm Karen
+
+BOT: Hello Karen! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?
+
+VISITOR: Buy
+
+BOT: Do you have a specific property in mind?
+
+VISITOR: Yes
+
+BOT: Which property is it? Please share the property name or address.
+
+VISITOR: Apartment 1, Aldermoor Place
+
+BOT: Great news, 'Apartment 1, Aldermoor Place' is available! It is a 2-bedroom, 2-bathroom apartment priced at £1,330,000.
+
+Can I get your phone number so our team can arrange a viewing?
+
+VISITOR: 07456 123456
+
 BOT: Thank you! Can I get your email address?
 
 VISITOR: karen@example.com

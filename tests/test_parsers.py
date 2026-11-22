@@ -49,7 +49,7 @@ class TestParsers:
 
     def test_parse_email(self):
         assert parse_email("My email is john.doe@example.co.uk") == "john.doe@example.co.uk"
-        assert parse_email("SARAH@COMMVERSION.COM") == "sarah@commversion.com"
+        assert parse_email("SARAH@EXAMPLE.COM") == "sarah@example.com"
         assert parse_email("invalid email without at") is None
 
     def test_parse_phone(self):

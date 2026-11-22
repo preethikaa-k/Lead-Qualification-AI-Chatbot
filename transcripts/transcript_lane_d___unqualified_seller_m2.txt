@@ -3,6 +3,8 @@ Lane: D | Result: PASS
 Final Qualification Status: UNQUALIFIED_M2
 --------------------------------------------------
 
+VISITOR: Hello, I am Frank
+
 BOT: Hello Frank! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?
 
 VISITOR: Sell

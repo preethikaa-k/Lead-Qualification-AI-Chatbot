@@ -15,6 +15,26 @@
   },
   "history": [
     {
+      "role": "user",
+      "content": "Hi, I'm Liam"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello Liam! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?"
+    },
+    {
+      "role": "user",
+      "content": "Buy"
+    },
+    {
+      "role": "assistant",
+      "content": "Do you have a specific property in mind?"
+    },
+    {
+      "role": "user",
+      "content": "Yes"
+    },
+    {
       "role": "assistant",
       "content": "Which property is it? Please share the property name or address."
     },

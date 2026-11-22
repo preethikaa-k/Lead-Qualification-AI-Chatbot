@@ -1,0 +1,29 @@
+=== Lane A - Unqualified M3 (No available stock <= budget) ===
+Lane: A | Result: PASS
+Final Qualification Status: UNQUALIFIED_M3
+--------------------------------------------------
+
+VISITOR: Hi, I'm Charlie
+
+BOT: Hello Charlie! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?
+
+VISITOR: Buy
+
+BOT: Do you have a specific property in mind?
+
+VISITOR: No
+
+BOT: Are you looking for a new-build or a resale home?
+
+VISITOR: New-build
+
+BOT: What is your budget for the new-build home, Charlie?
+
+VISITOR: £1.1m
+
+BOT: What is the postcode of your location of interest?
+
+VISITOR: SW3 3RB
+
+BOT: Sorry, we have no available homes matching your requirements right now. You can reach our head office on 020 7946 0100. Goodbye.
+

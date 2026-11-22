@@ -54,6 +54,7 @@ def is_answering_current_step(curr_step: Union[str, FlowStep], user_text: str) -
         "list properties",
         "show me your",
         "taj mahal",
+        "tajmahal",
         "hangar",
         "aircraft",
         "warehouse",

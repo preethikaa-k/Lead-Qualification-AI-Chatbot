@@ -106,15 +106,31 @@ def parse_phone(text: str) -> Optional[str]:
     return None
 
 
+DISALLOWED_NAME_TOKENS = {
+    "ignore", "system", "prompt", "admin", "dan", "bypass", "override", "qualify",
+    "qualified", "write", "script", "code", "poem", "joke", "help", "what", "who",
+    "where", "how", "when", "which", "why", "tell", "show", "explain", "assistant",
+    "bot", "agent", "user", "human", "developer", "root", "unfiltered", "unrestricted",
+    "rules", "instructions", "directive", "mode", "none", "null", "test", "looking",
+    "interested", "want", "here", "to", "buy", "sell", "house", "flat", "property"
+}
+
+
 def parse_name(text: str) -> Optional[str]:
     """
     Extracts the visitor's name from introductory phrases or bare inputs.
     e.g. 'I am Sarah Connor', "My name's David", 'Call me Alice', 'Sarah'
+    Hardened against prompt injection, question phrases, and non-name commands.
     """
-    if not text:
+    if not text or "?" in text:
         return None
 
     cleaned = text.strip()
+
+    # Reject if text contains system or injection markers
+    if any(tok in cleaned.lower().split() for tok in ["ignore", "system", "override", "bypass", "<|im_start|>", "dan", "mode"]):
+        return None
+
     # Match patterns like: my name is X, i'm X, i am X, this is X, call me X
     pattern = r"(?:my name is|i am|i'm|call me|this is|it's)\s+([A-Za-z\s'-]{2,30})"
     match = re.search(pattern, cleaned, re.IGNORECASE)
@@ -122,19 +138,18 @@ def parse_name(text: str) -> Optional[str]:
         name = match.group(1).strip()
         # Clean any trailing punctuation
         name = re.sub(r"[.,!?;:].*$", "", name).strip()
-        stop_words = {"looking", "interested", "want", "here", "to"}
         name_words = set(re.findall(r"\b\w+\b", name.lower()))
-        if name and not (stop_words & name_words):
+        if name and not (DISALLOWED_NAME_TOKENS & name_words):
             return name.title()
 
-    # If it's a short 1-3 word phrase without verbs, assume it's the direct name
+    # If it's a short 1-3 word phrase without verbs/stop words, assume it's the direct name
     words = cleaned.split()
     if 1 <= len(words) <= 3:
-        # Check that none of the words are common conversation verbs/stops
-        stop_words = {"hi", "hello", "hey", "yes", "no", "buy", "sell", "house", "flat", "please"}
-        if not any(w.lower() in stop_words for w in words):
+        stop_words = {"hi", "hello", "hey", "yes", "no", "buy", "sell", "house", "flat", "please", "morning", "afternoon", "evening"}
+        all_stops = stop_words | DISALLOWED_NAME_TOKENS
+        if not any(w.lower() in all_stops for w in words):
             clean_name = re.sub(r"[^A-Za-z\s'-]", "", cleaned).strip()
-            if len(clean_name) >= 2:
+            if len(clean_name) >= 2 and all(w.isalpha() for w in clean_name.split()):
                 return clean_name.title()
 
     return None
