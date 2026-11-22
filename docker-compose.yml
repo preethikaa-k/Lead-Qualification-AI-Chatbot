@@ -1,6 +1,7 @@
 services:
   api:
     build: .
+    image: ashcombe-rowe-api:latest  
     container_name: ashcombe_rowe_api
     restart: unless-stopped
     ports:
@@ -13,7 +14,7 @@ services:
       - ./transcripts:/app/transcripts
 
   ui:
-    build: .
+    image: ashcombe-rowe-api:latest
     container_name: ashcombe_rowe_ui
     restart: unless-stopped
     ports:
