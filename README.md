@@ -4,13 +4,13 @@
 [![Tests Passing](https://img.shields.io/badge/tests-76%2F76%20passing-brightgreen.svg)]()
 [![Benchmark Pass Rate](https://img.shields.io/badge/benchmarks-12%2F12%20(100%25)-success.svg)]()
 [![LangGraph](https://img.shields.io/badge/orchestrator-LangGraph%20StateGraph-blue.svg)]()
-[![Chroma Vector DB](https://img.shields.io/badge/vector%20store-Chroma%20HNSW-purple.svg)]()
+[![Qdrant Vector DB](https://img.shields.io/badge/vector%20store-Qdrant%20HNSW-purple.svg)]()
 [![Docker Ready](https://img.shields.io/badge/docker-ready-blue.svg)]()
 [![Failover Architecture](https://img.shields.io/badge/architecture-Gemini%20Cloud%20%2B%20Local%20Qwen%20Fallback-orange.svg)]()
 
 A production-grade agentic lead qualification system built for **Ashcombe & Rowe Estates**, a luxury UK residential property advisory (£1M+) across London, Surrey, and Oxford.
 
-Built with **LangGraph**, **Chroma Vector DB + BM25 Hybrid RAG**, **BAAI/bge-small-en-v1.5 open-source embeddings**, **Cross-Encoder re-ranking**, **multi-tier LLM failover circuits**, and **strict privacy guardrails**, this system qualifies high-net-worth buyers and sellers with **0% hallucination risk** and a refined, luxury client experience.
+Built with **LangGraph**, **Qdrant Vector DB + BM25 Hybrid RAG**, **BAAI/bge-small-en-v1.5 open-source embeddings**, **Cross-Encoder re-ranking**, **multi-tier LLM failover circuits**, and **strict privacy guardrails**, this system qualifies high-net-worth buyers and sellers with **0% hallucination risk** and a refined, luxury client experience.
 
 ---
 
@@ -74,7 +74,7 @@ As required by the technical specification, this project was developed, benchmar
 | **Fallback LLM** | **`qwen2.5:3b`** (4-bit quantized) | Ollama (`langchain-community`) | Zero-cost local inference, runs in <2 GB RAM on standard CPU, ensures high availability if cloud rate limits are reached. |
 | **Dense Embeddings** | **`BAAI/bge-small-en-v1.5`** (384 dimensions) | Sentence-Transformers (`langchain-community`) | Top-ranked open-source MTEB retrieval model with asymmetric query instruction prefix. Fast CPU inference (<15ms). |
 | **Cross-Encoder Re-ranker** | **`cross-encoder/ms-marco-MiniLM-L-2-v2`** | Sentence-Transformers | Deep cross-attention query-document re-ranking with logistic sigmoid confidence calibration and zero hallucination risk. |
-| **Vector Database** | **Chroma DB** (`chromadb>=0.5.0`) | `langchain-chroma` | Native Python runtime, embedded HNSW Approximate Nearest Neighbor (ANN) index (`hnsw:space=cosine`), zero container overhead. |
+| **Vector Database** | **Qdrant Vector DB** (`qdrant-client>=1.15.0`) | `langchain-qdrant` | High-performance Rust-powered HNSW Approximate Nearest Neighbor (ANN) index with native payload metadata filtering and in-memory or clustered operation. |
 
 ---
 
@@ -86,7 +86,7 @@ The project provides three distinct datasets. Using a naive "one-size-fits-all" 
 | :--- | :--- | :--- | :--- |
 | **`seller_coverage.csv`**<br>(100 UK postcodes) | **In-Memory Hash Set / Exact Normalized Match** | `set([pc.upper().replace(' ', '') for pc in df['postcode']])`<br>`O(1)` time complexity | **Why not Vector Search?** UK postcodes are short alphanumeric strings (e.g., `SW3 3RB` vs `SW10 9RR`). Vector embeddings calculate cosine distance based on character sub-tokens, causing false positives between adjacent districts. An in-memory hash set provides exact, deterministic matching with zero latency and zero false positives. |
 | **`properties_for_buyers.csv`**<br>(247 listings) | **Relational In-Memory Columnar Filtering + Fuzzy String Matching** | Pandas relational predicates for category, status (`available`), and price (`price <= budget`); Python `difflib.get_close_matches` for Lane C property names/addresses. | **Why not Vector Search?** Business logic requires strict numerical filtering (`£999,999` vs `£1,000,000`), status filtering (`available` vs `under_offer`), and category filtering (`new_build` vs `resale`). Vector search cannot guarantee strict mathematical inequalities. Relational in-memory filtering guarantees 100% mathematical accuracy. Fuzzy matching handles visitor typos in property names without semantic drift. |
-| **`faq.csv`**<br>(47 QA pairs) | **Production Multi-Stage Hybrid RAG: Overlapping Chunks + Chroma ANN + BM25Okapi + Cross-Encoder Rerank** | Semantic overlapping chunking (280c / 50c overlap), BAAI/BGE-small dense embeddings, BM25Okapi sparse retrieval, and Cross-Encoder re-ranking with a **0.60 confidence threshold**. | **Why Multi-Stage Hybrid RAG?** Natural user questions vary widely in phrasing (e.g., "when are you open on Sundays?" vs "Sunday Chelsea hours"). Dense BGE search captures semantic meaning, BM25 ensures exact keyword hits on branch names and fees, and the Cross-Encoder re-ranks candidate chunks with joint cross-attention. Queries scoring below 0.60 trigger automatic deflection to the head office phone (`020 7946 0100`), ensuring zero hallucinated answers. |
+| **`faq.csv`**<br>(47 QA pairs) | **Production Multi-Stage Hybrid RAG: Overlapping Chunks + Qdrant HNSW ANN + BM25Okapi + Cross-Encoder Rerank** | Semantic overlapping chunking (280c / 50c overlap), BAAI/BGE-small dense embeddings in Qdrant, BM25Okapi sparse retrieval, and Cross-Encoder re-ranking with a **0.60 confidence threshold**. | **Why Multi-Stage Hybrid RAG?** Natural user questions vary widely in phrasing (e.g., "when are you open on Sundays?" vs "Sunday Chelsea hours"). Dense BGE search in Qdrant captures semantic meaning, BM25 ensures exact keyword hits on branch names and fees, and the Cross-Encoder re-ranks candidate chunks with joint cross-attention. Queries scoring below 0.60 trigger automatic deflection to the head office phone (`020 7946 0100`), ensuring zero hallucinated answers. |
 
 ---
 
@@ -96,8 +96,8 @@ The project provides three distinct datasets. Using a naive "one-size-fits-all" 
 * **Decision**: We separate language understanding (handled by LLM) from business logic and qualification decisions (handled by a deterministic Python state machine and LangGraph edges).
 * **Trade-Off**: An autonomous ReAct agent given the entire business policy in its system prompt can hallucinate, overlook edge cases (e.g., treating £950k as "close enough to £1M"), or get tricked by prompt injection. Our deterministic gatekeeper sacrifices open-ended improvisation for **100% regulatory compliance, 0% hallucination risk, and predictable enterprise lead qualification**.
 
-### 2. Hybrid RAG (Dense Chroma + Sparse BM25 + Cross-Encoder) vs. Dense-Only Search
-* **Decision**: Fuse Chroma cosine similarity (35% weight) with BM25Okapi lexical matching (15% weight) and Cross-Encoder deep re-ranking (50% weight).
+### 2. Hybrid RAG (Dense Qdrant + Sparse BM25 + Cross-Encoder) vs. Dense-Only Search
+* **Decision**: Fuse Qdrant cosine similarity (35% weight) with BM25Okapi lexical matching (15% weight) and Cross-Encoder deep re-ranking (50% weight).
 * **Trade-Off**: Multi-stage ranking requires two quick forward passes (~48ms on CPU), but completely eliminates false matches on critical domain terms (e.g. branch names, specific percentage commission rates) and achieved **100% Hit@1 Context Precision in benchmarks**.
 
 ### 3. Dual-Tier Failover Architecture vs. Single Cloud Provider
@@ -125,7 +125,7 @@ flowchart TD
     end
 
     subgraph Dual-Track Knowledge & RAG
-        MindChangeCheck -->|FAQ / Agency Query| FAQRAG[Hybrid RAG Engine\nChroma Vector DB + BM25Okapi]
+        MindChangeCheck -->|FAQ / Agency Query| FAQRAG[Hybrid RAG Engine\nQdrant Vector DB + BM25Okapi]
         FAQRAG -->|Confidence >= 0.60| AnswerResume[Answer Question + Resume Prompt]
         FAQRAG -->|Confidence < 0.60| OfficeFallback[Office Phone 020 7946 0100 + Resume Prompt]
         MindChangeCheck -->|Mind Change: Sell <-> Buy| RerouteLane[Update Intent & Switch Lane]
@@ -243,7 +243,7 @@ Our FAQ Knowledge Engine (`src/rag_engine.py`) implements a multi-stage producti
                     ▼                               ▼
        [Dense ANN Vector Search]       [Sparse Lexical Search]
       BAAI/bge-small-en-v1.5 (384d)         BM25Okapi (k1=1.5, b=0.75)
-      Chroma HNSW (hnsw:space=cosine)   Stopword-filtered token frequencies
+      Qdrant HNSW Vector Store          Stopword-filtered token frequencies
       Top-8 Candidate Chunks           Top-8 Candidate Chunks
                     │                               │
                     └───────────────┬───────────────┘
@@ -283,7 +283,7 @@ Our FAQ Knowledge Engine (`src/rag_engine.py`) implements a multi-stage producti
 | :--- | :--- | :--- | :--- |
 | **1. Chunking with Overlap** | `SemanticOverlapChunker` | `chunk_size=280`, `overlap=50` characters | Multi-sentence answers (e.g. fees, branches, GDPR) are split into overlapping semantic windows while retaining parent question and category context. |
 | **2. Dense Open-Source Embeddings** | **`BAAI/bge-small-en-v1.5`** | Hugging Face Sentence-Transformers (384 dimensions) | Ranked #1 small model on the MTEB leaderboard. Utilizes the asymmetric BGE retrieval prompt prefix (`Represent this sentence for searching relevant passages: `). Sub-15ms CPU inference. |
-| **3. ANN Vector Store** | **Chroma DB** | HNSW Graph Index (`{"hnsw:space": "cosine"}`) | High-speed Approximate Nearest Neighbor retrieval with native cosine distance normalization. |
+| **3. ANN Vector Store** | **Qdrant Vector DB** | HNSW Graph Index (In-Memory or Clustered) | High-speed Approximate Nearest Neighbor retrieval with native cosine distance normalization and payload filtering. |
 | **4. Sparse Lexical Search** | **BM25Okapi** | Pure-Python Okapi BM25 ($k_1=1.5, b=0.75$) with stopword removal | Captures exact keyword and entity hits (e.g. specific branch names, sole agency vs multi agency rates). Normalized via standard saturation curve. |
 | **5. Cross-Encoder Re-Ranking** | **`ms-marco-MiniLM-L-2-v2`** | Pre-trained Cross-Encoder Transformer | Evaluates full cross-attention across (query, candidate) tokens simultaneously, overcoming bi-encoder representation bottlenecks. Scores calibrated via logistic sigmoid. |
 | **6. Grounding Firewall** | Gatekeeper Floor | **`Threshold >= 0.60`** | Enforces zero hallucinations. Out-of-domain questions scoring below 0.60 automatically deflect to the head office phone (`020 7946 0100`). |
@@ -330,7 +330,7 @@ To deliver high-speed, multi-turn qualification dialogues without token explosio
 ```
 ashcombe_rowe_estate_agent/
 ├── .env.example               # Environment variables template (no keys committed)
-├── .gitignore                 # Excludes venv, cache, Chroma persistence, and secrets
+├── .gitignore                 # Excludes venv, cache, vector store persistence, and secrets
 ├── Dockerfile                 # Multi-stage production container build
 ├── docker-compose.yml         # Container orchestration (FastAPI + Streamlit)
 ├── pytest.ini                 # Pytest configuration and test path definitions

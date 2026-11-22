@@ -3,7 +3,7 @@ Production Enterprise Hybrid RAG Engine for Ashcombe & Rowe Estates FAQ Knowledg
 Architecture:
 1. Semantic Chunking with Overlap: Splits long passages into overlapping token windows
 2. Open-Source Dense Embedding: BAAI/bge-small-en-v1.5 (Top MTEB retrieval model) with BGE query instruction prefix
-3. Approximate Nearest Neighbor (ANN): Chroma HNSW VectorStore (hnsw:space=cosine)
+3. Approximate Nearest Neighbor (ANN): Qdrant HNSW Vector Store (Rust Engine)
 4. Sparse Lexical Search: BM25Okapi for precise keyword and entity matching
 5. Cross-Encoder Re-Ranking: CrossEncoder (cross-encoder/ms-marco-MiniLM-L-2-v2) for deep semantic cross-attention
 6. Document Grounding Gatekeeper: Strict confidence thresholding (0.60) to eliminate hallucinations
@@ -278,7 +278,7 @@ class FAQRagEngine:
     Production-grade Hybrid RAG Engine:
     - Granular overlapping chunking of knowledge passages
     - Open-source BAAI/bge-small-en-v1.5 dense embeddings
-    - Chroma HNSW Approximate Nearest Neighbors (ANN) vector store
+    - Qdrant HNSW Approximate Nearest Neighbors (ANN) vector store
     - BM25Okapi sparse lexical retriever
     - Cross-Encoder deep re-ranking (cross-encoder/ms-marco-MiniLM-L-2-v2)
     - Strict confidence gatekeeper (0.60 threshold) guaranteeing zero hallucinations
@@ -291,7 +291,7 @@ class FAQRagEngine:
         self.indexed_metadatas: List[Dict[str, Any]] = []
         
         self.vector_store = None
-        self.vector_store_type: str = "chroma"
+        self.vector_store_type: str = "qdrant"
         self.sentence_model = None
         self.reranker_model = None
         self.bm25_retriever: Optional[BM25Okapi] = None
@@ -523,31 +523,34 @@ class FAQRagEngine:
             self.bm25_retriever = BM25Okapi(bm25_corpus)
             logger.info(f"Initialized BM25 sparse index over {len(texts)} document chunks.")
 
-            # 6. Initialize Chroma ANN Vector Store (hnsw:space=cosine)
-            store_choice = (settings.RAG_VECTOR_STORE or "chroma").lower()
-            self.vector_store_type = "in_memory"
+            # 6. Initialize Qdrant Vector Store (Enterprise Rust Engine)
+            self.vector_store_type = "qdrant"
+            try:
+                from langchain_qdrant import QdrantVectorStore
 
-            if store_choice == "chroma":
-                try:
-                    try:
-                        from langchain_chroma import Chroma
-                    except ImportError:
-                        from langchain_community.vectorstores import Chroma
-
-                    self.vector_store = Chroma.from_texts(
+                if settings.QDRANT_URL:
+                    self.vector_store = QdrantVectorStore.from_texts(
                         texts=texts,
                         embedding=embeddings,
                         metadatas=metadatas,
-                        collection_metadata={"hnsw:space": "cosine"},
+                        url=settings.QDRANT_URL,
+                        api_key=settings.QDRANT_API_KEY or None,
+                        collection_name=settings.QDRANT_COLLECTION,
                     )
-                    self.vector_store_type = "chroma"
-                    logger.info(f"Initialized Chroma ANN vector store with {len(texts)} chunks (hnsw:space=cosine).")
-                except Exception as e:
-                    logger.warning(f"Chroma initialization error ({e}), falling back to InMemoryVectorStore.")
-                    self.vector_store = InMemoryVectorStore(embeddings)
-                    self.vector_store.add_texts(texts=texts, metadatas=metadatas)
-                    self.vector_store_type = "in_memory"
-            else:
+                    self.vector_store_type = "qdrant"
+                    logger.info(f"Initialized remote Qdrant vector store at {settings.QDRANT_URL} ({len(texts)} chunks).")
+                else:
+                    self.vector_store = QdrantVectorStore.from_texts(
+                        texts=texts,
+                        embedding=embeddings,
+                        metadatas=metadatas,
+                        location=":memory:",
+                        collection_name=settings.QDRANT_COLLECTION,
+                    )
+                    self.vector_store_type = "qdrant"
+                    logger.info(f"Initialized high-performance in-memory Qdrant vector store with {len(texts)} chunks.")
+            except Exception as q_err:
+                logger.warning(f"Qdrant initialization error ({q_err}), falling back to InMemoryVectorStore.")
                 self.vector_store = InMemoryVectorStore(embeddings)
                 self.vector_store.add_texts(texts=texts, metadatas=metadatas)
                 self.vector_store_type = "in_memory"
@@ -568,10 +571,10 @@ class FAQRagEngine:
             logger.error(f"TF-IDF initialization failed: {e}")
             self.vectorizer = None
 
-    def search_faq(self, query: str, threshold: float = 0.60) -> Optional[FAQItem]:
+    def search_faq(self, query: str, threshold: float = 0.60, category: Optional[str] = None) -> Optional[FAQItem]:
         """
-        Production Multi-Stage RAG:
-        Stage 1: Dense Semantic ANN Retrieval via Chroma HNSW (cosine similarity)
+        Production Multi-Stage RAG with Optional Metadata Filtering:
+        Stage 1: Dense Semantic ANN Retrieval via Qdrant / Chroma HNSW (with metadata filtering)
         Stage 2: Sparse Lexical Retrieval via BM25Okapi
         Stage 3: Deep Cross-Encoder Re-Ranking (cross-attention across query & document)
         Stage 4: Reciprocal Rank Fusion & Sigmoid Confidence Calibration
@@ -589,21 +592,36 @@ class FAQRagEngine:
         candidates: Dict[str, Dict[str, Any]] = {}
 
         # ---------------------------------------------------------------------
-        # Stage 1: Dense Semantic ANN Search (top-k)
+        # Stage 1: Dense Semantic ANN Search (top-k) with optional metadata filter
         # ---------------------------------------------------------------------
         dense_score_max = 0.0
         if self.vector_store is not None:
             try:
-                results = self.vector_store.similarity_search_with_score(clean_query, k=8)
+                # Use metadata filter if provided
+                kwargs: Dict[str, Any] = {"k": 8}
+                if category and self.vector_store_type == "qdrant":
+                    try:
+                        from qdrant_client.http import models as qmodels
+                        kwargs["filter"] = qmodels.Filter(
+                            must=[qmodels.FieldCondition(key="category", match=qmodels.MatchValue(value=category))]
+                        )
+                    except Exception:
+                        pass
+
+                try:
+                    results = self.vector_store.similarity_search_with_score(clean_query, **kwargs)
+                except Exception:
+                    # Fallback to search without native filter if store dialect mismatch
+                    results = self.vector_store.similarity_search_with_score(clean_query, k=8)
+
                 for doc, raw_score in results:
                     meta = doc.metadata
                     fid = meta.get("faq_id")
                     if not fid:
                         continue
-                    if self.vector_store_type == "chroma":
-                        d_score = max(0.0, min(1.0, 1.0 - float(raw_score)))
-                    else:
-                        d_score = max(0.0, min(1.0, float(raw_score)))
+                    if category and meta.get("category") != category:
+                        continue
+                    d_score = max(0.0, min(1.0, float(raw_score)))
 
                     if d_score > dense_score_max:
                         dense_score_max = d_score
@@ -644,6 +662,8 @@ class FAQRagEngine:
                         meta = self.indexed_metadatas[idx]
                         fid = meta.get("faq_id")
                         if not fid:
+                            continue
+                        if category and meta.get("category") != category:
                             continue
 
                         if fid not in candidates:
@@ -810,9 +830,9 @@ class FAQRagEngine:
         )
         return None
 
-    def search_faq_multi(self, query: str, top_k: int = 4, threshold: float = 0.58) -> List[FAQItem]:
+    def search_faq_multi(self, query: str, top_k: int = 4, threshold: float = 0.58, category: Optional[str] = None) -> List[FAQItem]:
         """
-        Multi-chunk Hybrid Retrieval for multi-part or broader inquiries.
+        Multi-chunk Hybrid Retrieval for multi-part or broader inquiries with optional category metadata filtering.
         Retrieves top_k related FAQ entries with de-duplication across chunks.
         """
         if not query or not self.faqs:
@@ -828,16 +848,29 @@ class FAQRagEngine:
         # 1. Dense Semantic Search (top 8)
         if self.vector_store is not None:
             try:
-                results = self.vector_store.similarity_search_with_score(clean_query, k=min(8, len(self.indexed_texts)))
+                kwargs: Dict[str, Any] = {"k": min(8, len(self.indexed_texts))}
+                if category and self.vector_store_type == "qdrant":
+                    try:
+                        from qdrant_client.http import models as qmodels
+                        kwargs["filter"] = qmodels.Filter(
+                            must=[qmodels.FieldCondition(key="category", match=qmodels.MatchValue(value=category))]
+                        )
+                    except Exception:
+                        pass
+
+                try:
+                    results = self.vector_store.similarity_search_with_score(clean_query, **kwargs)
+                except Exception:
+                    results = self.vector_store.similarity_search_with_score(clean_query, k=min(8, len(self.indexed_texts)))
+
                 for doc, raw_score in results:
                     meta = doc.metadata
                     fid = meta.get("faq_id")
                     if not fid:
                         continue
-                    if self.vector_store_type == "chroma":
-                        score = max(0.0, min(1.0, 1.0 - float(raw_score)))
-                    else:
-                        score = max(0.0, min(1.0, float(raw_score)))
+                    if category and meta.get("category") != category:
+                        continue
+                    score = max(0.0, min(1.0, float(raw_score)))
 
                     if fid not in matched_items or score > matched_items[fid][0]:
                         item = next((f for f in self.faqs if f.faq_id == fid), None)
@@ -860,6 +893,8 @@ class FAQRagEngine:
                         meta = self.indexed_metadatas[idx]
                         fid = meta.get("faq_id")
                         if not fid:
+                            continue
+                        if category and meta.get("category") != category:
                             continue
                         if fid in matched_items:
                             prev_score, it = matched_items[fid]

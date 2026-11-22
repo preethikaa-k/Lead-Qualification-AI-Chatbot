@@ -45,7 +45,10 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
     EMBEDDING_API_KEY: str = os.getenv("EMBEDDING_API_KEY", "")
     RERANKER_MODEL: str = os.getenv("RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-2-v2")
-    RAG_VECTOR_STORE: str = os.getenv("RAG_VECTOR_STORE", "chroma")  # chroma | in_memory
+    RAG_VECTOR_STORE: str = os.getenv("RAG_VECTOR_STORE", "qdrant")  # qdrant | in_memory
+    QDRANT_URL: str = os.getenv("QDRANT_URL", "")  # e.g. http://localhost:6333 (leave empty for in-memory)
+    QDRANT_API_KEY: str = os.getenv("QDRANT_API_KEY", "")
+    QDRANT_COLLECTION: str = os.getenv("QDRANT_COLLECTION", "ashcombe_rowe_faqs")
     RAG_CHUNK_SIZE: int = int(os.getenv("RAG_CHUNK_SIZE", "280"))
     RAG_CHUNK_OVERLAP: int = int(os.getenv("RAG_CHUNK_OVERLAP", "50"))
     

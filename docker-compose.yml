@@ -5,10 +5,10 @@ services:
     container_name: ashcombe_rowe_api
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "8080:8080"
     env_file:
       - .env
-    command: ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+    command: ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8080"]
     volumes:
       - ./data:/app/data
       - ./transcripts:/app/transcripts
