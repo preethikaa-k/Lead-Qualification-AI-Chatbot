@@ -42,6 +42,8 @@ class LeadQualificationAgent:
         self.llm = llm_client
         self.tools = ALL_ESTATE_TOOLS
         self.sessions: Dict[str, ConversationState] = {}
+        self.full_histories: Dict[str, List[Dict[str, str]]] = {}
+        self.live_transcript_files: Dict[str, str] = {}
         self.input_guardrail = input_guardrail
         self.output_guardrail = output_guardrail
         self.memory = short_term_memory
@@ -75,6 +77,73 @@ class LeadQualificationAgent:
         """
         return self.input_guardrail.check_prompt_injection(text)
 
+    def _save_live_transcript(self, session_id: str, state: ConversationState) -> None:
+        """
+        Automatically writes a full live conversation transcript to the transcripts/ folder
+        in both human-readable text (.txt) and structured JSON (.json).
+        Updates in real time as the client speaks and provides their name.
+        """
+        try:
+            import json
+            from pathlib import Path
+            transcripts_dir = Path(__file__).resolve().parent.parent / "transcripts"
+            transcripts_dir.mkdir(parents=True, exist_ok=True)
+
+            history = self.full_histories.get(session_id, [])
+            name = (state.lead.visitor_name or "visitor").strip().lower()
+            name_slug = re.sub(r"[^a-zA-Z0-9_-]", "_", name)
+            sid_short = session_id[:8] if session_id else "live"
+            new_base = f"transcript_live_{name_slug}_{sid_short}"
+
+            old_base = self.live_transcript_files.get(session_id)
+            if old_base and old_base != new_base:
+                old_txt = transcripts_dir / f"{old_base}.txt"
+                old_json = transcripts_dir / f"{old_base}.json"
+                if old_txt.exists():
+                    try:
+                        old_txt.unlink()
+                    except Exception:
+                        pass
+                if old_json.exists():
+                    try:
+                        old_json.unlink()
+                    except Exception:
+                        pass
+
+            self.live_transcript_files[session_id] = new_base
+
+            # 1. Write Text Transcript
+            txt_path = transcripts_dir / f"{new_base}.txt"
+            display_name = state.lead.visitor_name or "Anonymous Visitor"
+            step_str = state.current_step.value if hasattr(state.current_step, "value") else str(state.current_step)
+            status_str = state.qualification_status.value if hasattr(state.qualification_status, "value") else str(state.qualification_status)
+
+            with open(txt_path, "w", encoding="utf-8") as f:
+                f.write(f"=== Live Conversation: {display_name} ===\n")
+                f.write(f"Session ID: {session_id}\n")
+                f.write(f"Lane: {state.lane or 'Unassigned'} | Current Step: {step_str}\n")
+                f.write(f"Qualification Status: {status_str}\n")
+                f.write("-" * 50 + "\n\n")
+                for turn in history:
+                    speaker = "VISITOR" if turn["role"] == "user" else "BOT"
+                    f.write(f"{speaker}: {turn['content']}\n\n")
+
+            # 2. Write JSON Transcript
+            json_path = transcripts_dir / f"{new_base}.json"
+            with open(json_path, "w", encoding="utf-8") as f:
+                json.dump({
+                    "session_id": session_id,
+                    "visitor_name": state.lead.visitor_name,
+                    "lane": state.lane,
+                    "current_step": step_str,
+                    "qualification_status": status_str,
+                    "completed": state.completed,
+                    "lead_data": state.lead.model_dump(),
+                    "history": history,
+                }, f, indent=2)
+        except Exception as e:
+            logger.debug(f"Could not auto-save live transcript: {e}")
+
     def chat(self, session_id: str, user_message: str) -> str:
         """
         Processes a user message for the given session.
@@ -95,6 +164,12 @@ class LeadQualificationAgent:
             )
             state.history.append({"role": "user", "content": input_res.sanitized_text})
             state.history.append({"role": "assistant", "content": deflection})
+
+            if session_id not in self.full_histories:
+                self.full_histories[session_id] = []
+            self.full_histories[session_id].append({"role": "user", "content": input_res.sanitized_text})
+            self.full_histories[session_id].append({"role": "assistant", "content": deflection})
+            self._save_live_transcript(session_id, state)
             return deflection
 
         sanitized_msg = input_res.sanitized_text
@@ -119,6 +194,14 @@ class LeadQualificationAgent:
             self.memory.add_turn(session_id, "user", sanitized_msg)
             self.memory.add_turn(session_id, "assistant", final_reply)
             self.memory.save_session(session_id, state)
+
+            # Record full turn history & auto-save live transcript
+            if session_id not in self.full_histories:
+                self.full_histories[session_id] = []
+            self.full_histories[session_id].append({"role": "user", "content": sanitized_msg})
+            self.full_histories[session_id].append({"role": "assistant", "content": final_reply})
+            self._save_live_transcript(session_id, state)
+
             return final_reply
 
         # Fallback to direct state machine if LangGraph disabled
@@ -134,6 +217,14 @@ class LeadQualificationAgent:
         self.memory.add_turn(session_id, "user", sanitized_msg)
         self.memory.add_turn(session_id, "assistant", final_reply)
         self.memory.save_session(session_id, state)
+
+        # Record full turn history & auto-save live transcript
+        if session_id not in self.full_histories:
+            self.full_histories[session_id] = []
+        self.full_histories[session_id].append({"role": "user", "content": sanitized_msg})
+        self.full_histories[session_id].append({"role": "assistant", "content": final_reply})
+        self._save_live_transcript(session_id, state)
+
         return final_reply
 
     def get_session_state(self, session_id: str) -> Optional[ConversationState]:

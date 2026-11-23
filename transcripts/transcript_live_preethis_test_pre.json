@@ -1,0 +1,37 @@
+{
+  "session_id": "test_preethis_session_001",
+  "visitor_name": "Preethis",
+  "lane": null,
+  "current_step": "SPECIFIC_PROPERTY_PROMPT",
+  "qualification_status": "IN_PROGRESS",
+  "completed": false,
+  "lead_data": {
+    "visitor_name": "Preethis",
+    "phone": null,
+    "email": null,
+    "intent": "buy",
+    "category": null,
+    "budget_gbp": null,
+    "postcode": null,
+    "specific_property_name": null,
+    "matched_properties": []
+  },
+  "history": [
+    {
+      "role": "user",
+      "content": "Hello, I am Preethis"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello Preethis! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?"
+    },
+    {
+      "role": "user",
+      "content": "I want to buy a home"
+    },
+    {
+      "role": "assistant",
+      "content": "Certainly! Let's look for a home to buy. Do you have a specific property in mind?"
+    }
+  ]
+}

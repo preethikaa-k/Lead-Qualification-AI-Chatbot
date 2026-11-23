@@ -1,0 +1,14 @@
+=== Live Conversation: Preethis ===
+Session ID: test_preethis_session_001
+Lane: Unassigned | Current Step: SPECIFIC_PROPERTY_PROMPT
+Qualification Status: IN_PROGRESS
+--------------------------------------------------
+
+VISITOR: Hello, I am Preethis
+
+BOT: Hello Preethis! Welcome to Ashcombe & Rowe Estates. Are you looking to buy or sell a home?
+
+VISITOR: I want to buy a home
+
+BOT: Certainly! Let's look for a home to buy. Do you have a specific property in mind?
+
